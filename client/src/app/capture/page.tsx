@@ -14,7 +14,8 @@ export default function Capture() {
 		navigator.mediaDevices
 			.getUserMedia({ video: true, audio: true })
 			.then((stream) => {
-				videoRef.current.srcObject = stream;
+				if (videoRef.current)
+					videoRef.current.srcObject = stream;
 
 				const mediaRecorder = new MediaRecorder(stream);
 				mediaRecorder.ondataavailable = (event) => {
