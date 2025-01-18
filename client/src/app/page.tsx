@@ -122,6 +122,7 @@ export default function Home() {
   useEffect(() => {
     let isDetecting = false;
     let animationFrameId: number;
+    let frameCount = 0;
 
     const detectFeaturesInVideo = async () => {
       if (
@@ -145,6 +146,7 @@ export default function Home() {
       try {
         isDetecting = true;
         const timestamp = performance.now();
+        frameCount++;
 
         // Detect faces
         const faceResults = faceLandmarker.detectForVideo(
@@ -157,6 +159,45 @@ export default function Home() {
           videoRef.current,
           timestamp
         ) as HandDetectionResults;
+
+        // Log frame data every 30 frames (approximately once per second at 30fps)
+        if (frameCount % 30 === 0) {
+          const frameData = {
+            timestamp,
+            frameNumber: frameCount,
+            faces: {
+              count: faceResults.faceLandmarks?.length || 0,
+              landmarks: faceResults.faceLandmarks?.map(landmarks => 
+                landmarks.map(point => ({
+                  x: Math.round(point.x * 1000) / 1000,
+                  y: Math.round(point.y * 1000) / 1000
+                }))
+              )
+            },
+            hands: {
+              count: handResults.landmarks?.length || 0,
+              landmarks: handResults.landmarks?.map(landmarks =>
+                landmarks.map(point => ({
+                  x: Math.round(point.x * 1000) / 1000,
+                  y: Math.round(point.y * 1000) / 1000,
+                  z: Math.round(point.z * 1000) / 1000
+                }))
+              )
+            }
+          };
+
+          // Calculate size in bytes
+          const dataSizeBytes = new TextEncoder().encode(JSON.stringify(frameData)).length;
+          const dataSizeKB = Math.round((dataSizeBytes / 1024) * 100) / 100;
+
+          console.log('=== Frame Data ===', {
+            ...frameData,
+            dataSize: {
+              bytes: dataSizeBytes,
+              kilobytes: dataSizeKB
+            }
+          });
+        }
 
         // Clear canvas
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -200,7 +241,6 @@ export default function Home() {
         console.error('Error in detection:', error);
       } finally {
         isDetecting = false;
-        // Schedule next detection
         animationFrameId = requestAnimationFrame(detectFeaturesInVideo);
       }
     };
