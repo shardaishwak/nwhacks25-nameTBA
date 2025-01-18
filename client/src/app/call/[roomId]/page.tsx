@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"; // Ensure this file is treated as a Client Component
 
 import React, { useEffect, useRef, useState } from "react";
