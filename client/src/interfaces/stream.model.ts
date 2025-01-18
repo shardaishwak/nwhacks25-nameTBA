@@ -8,6 +8,15 @@ export interface StreamData {
     healthData: HealthData;
 }
 
+export interface VideoTrackData {
+    id: string;
+    kind: string;
+    label: string;
+    enabled: boolean;
+    muted: boolean;
+    readyState: string;
+}
+
 export interface HandData {
     speed: number;
     position: {
