@@ -4,7 +4,7 @@
 
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
-import { io } from "socket.io-client";
+import { io } from 'socket.io-client';
 import {
   HandLandmarker,
   FaceLandmarker,
@@ -41,25 +41,37 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  
+
   // WebRTC refs
   const socketRef = useRef<any>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
 
   // State
-  const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(null);
-  const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(null);
+  const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(
+    null
+  );
+  const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(
+    null
+  );
   const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
-  const [remoteCtx, setRemoteCtx] = useState<CanvasRenderingContext2D | null>(null);
+  const [remoteCtx, setRemoteCtx] = useState<CanvasRenderingContext2D | null>(
+    null
+  );
   const [webcamRunning, setWebcamRunning] = useState(false);
   const [webRTCState, setWebRTCState] = useState<WebRTCState>({
     remoteStreamExists: false,
-    roomId: null
+    roomId: null,
   });
 
   // Add state for joining
   const [joinRoomId, setJoinRoomId] = useState<string>('');
   const [isJoining, setIsJoining] = useState(false);
+
+  // Add room management state
+  const [isInRoom, setIsInRoom] = useState(false);
+
+  // Add local stream ref
+  const localStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const initializeFaceLandmarker = async () => {
@@ -95,13 +107,19 @@ export default function Home() {
         setFaceLandmarker(faceLandmarkerInstance);
         setHandLandmarker(handLandmarkerInstance);
         // Initialize canvas context
-        const context = canvasRef.current?.getContext('2d');
-        if (context) {
-          context.globalAlpha = 0.8; // Adjust transparency of landmarks
-          setCtx(context);
+        const localContext = canvasRef.current?.getContext('2d');
+        const remoteContext = remoteCanvasRef.current?.getContext('2d');
+
+        if (localContext) {
+          localContext.globalAlpha = 0.8;
+          setCtx(localContext);
+        }
+        if (remoteContext) {
+          remoteContext.globalAlpha = 0.8;
+          setRemoteCtx(remoteContext);
         }
       } catch (error) {
-        console.error('Error initializing FaceLandmarker:', error);
+        console.error('Error initializing:', error);
       }
     };
     initializeFaceLandmarker();
@@ -113,25 +131,30 @@ export default function Home() {
       const startWebcam = async () => {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: 640,
-              height: 480,
-              frameRate: { ideal: 30 },
-            },
+            video: { width: 640, height: 480, frameRate: { ideal: 30 } },
+            audio: true,
           });
+
+          localStreamRef.current = stream;
 
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            // Ensure video metadata is loaded
             videoRef.current.onloadedmetadata = () => {
-              if (videoRef.current) {
-                videoRef.current.play();
-                // Wait a brief moment to ensure video is actually playing
-                setTimeout(() => {
-                  setWebcamRunning(true);
-                }, 100);
-              }
+              videoRef.current?.play();
+              setWebcamRunning(true);
             };
+          }
+
+          // Add tracks to peer connection if it exists
+          if (peerConnectionRef.current) {
+            stream.getTracks().forEach((track) => {
+              if (localStreamRef.current) {
+                peerConnectionRef.current?.addTrack(
+                  track,
+                  localStreamRef.current
+                );
+              }
+            });
           }
         } catch (err) {
           console.error('Error accessing webcam:', err);
@@ -145,70 +168,86 @@ export default function Home() {
   useEffect(() => {
     if (!faceLandmarker) return;
 
-    // Only generate room ID if not joining
-    const roomId = isJoining ? joinRoomId : Math.random().toString(36).substring(7);
-    
-    // Connect to Socket.IO signaling server
-    socketRef.current = io("https://nwhacks25-nametba.onrender.com", {
-      transports: ["websocket"],
+    const roomId = isJoining
+      ? joinRoomId
+      : Math.random().toString(36).substring(7);
+
+    // 1) Connect to Socket.IO signaling server
+    // socketRef.current = io("https://nwhacks25-nametba.onrender.com", {
+    socketRef.current = io('https://nwhacks25-nametba.onrender.com', {
+      transports: ['websocket'],
     });
 
-    socketRef.current.on("connect", () => {
-      console.log("Connected to signaling server:", socketRef.current.id);
-      socketRef.current.emit("join-room", roomId);
-      setWebRTCState(prev => ({ ...prev, roomId }));
+    socketRef.current.on('connect', () => {
+      console.log('Connected to signaling server:', socketRef.current.id);
+      socketRef.current.emit('join-room', roomId);
+      setWebRTCState((prev) => ({ ...prev, roomId }));
     });
 
     // 2) Create RTCPeerConnection
-    const configuration: RTCConfiguration = {
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    };
-    const pc = new RTCPeerConnection(configuration);
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    });
     peerConnectionRef.current = pc;
 
-    // ICE candidates handling
+    // 3) Add local tracks to peer connection when available
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => {
+        if (localStreamRef.current) {
+          pc.addTrack(track, localStreamRef.current);
+        }
+      });
+    }
+
+    // 4) Handle ICE candidates
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        socketRef.current.emit("signal", {
+        socketRef.current.emit('signal', {
           roomId,
           data: { candidate: event.candidate },
         });
       }
     };
 
-    // Handle remote stream
+    // 5) Handle remote stream
     pc.ontrack = (event) => {
-      console.log("Got remote track:", event.streams[0]);
+      console.log('Got remote track:', event.streams[0]);
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
-        setWebRTCState(prev => ({ ...prev, remoteStreamExists: true }));
+        setWebRTCState((prev) => ({ ...prev, remoteStreamExists: true }));
       }
     };
 
-    // Handle peer joining
-    socketRef.current.on("peer-joined", async (newPeerId: string) => {
+    // 6) Handle peer joining
+    socketRef.current.on('peer-joined', async (newPeerId: string) => {
+      console.log('Peer joined:', newPeerId);
       if (socketRef.current.id < newPeerId) {
         await createOffer();
       }
     });
 
-    // Handle signaling
-    socketRef.current.on("signal", async ({ from, data }: any) => {
-      if (data.type === "offer") {
-        await pc.setRemoteDescription(new RTCSessionDescription(data));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        socketRef.current.emit("signal", { roomId, data: answer });
-      } else if (data.type === "answer") {
-        await pc.setRemoteDescription(new RTCSessionDescription(data));
-      } else if (data.candidate) {
-        await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+    // 7) Handle signaling
+    socketRef.current.on('signal', async ({ from, data }: any) => {
+      try {
+        if (data.type === 'offer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(data));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          socketRef.current.emit('signal', { roomId, data: answer });
+        } else if (data.type === 'answer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(data));
+        } else if (data.candidate) {
+          await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+      } catch (error) {
+        console.error('Error handling signal:', error);
       }
     });
 
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
       if (peerConnectionRef.current) peerConnectionRef.current.close();
+      localStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, [faceLandmarker, isJoining, joinRoomId]);
 
@@ -218,7 +257,15 @@ export default function Home() {
     canvas: HTMLCanvasElement,
     context: CanvasRenderingContext2D
   ) => {
-    if (!video || !canvas || !context || video.paused || video.ended || video.readyState !== 4) return;
+    if (
+      !video ||
+      !canvas ||
+      !context ||
+      video.paused ||
+      video.ended ||
+      video.readyState !== 4
+    )
+      return;
 
     try {
       const timestamp = performance.now();
@@ -280,16 +327,25 @@ export default function Home() {
   // Animation frame handler
   useEffect(() => {
     let animationFrameId: number;
-    
+
     const animate = async () => {
       if (videoRef.current && canvasRef.current && ctx) {
         await detectFeaturesInVideo(videoRef.current, canvasRef.current, ctx);
       }
-      
-      if (remoteVideoRef.current && remoteCanvasRef.current && remoteCtx && webRTCState.remoteStreamExists) {
-        await detectFeaturesInVideo(remoteVideoRef.current, remoteCanvasRef.current, remoteCtx);
+
+      if (
+        remoteVideoRef.current &&
+        remoteCanvasRef.current &&
+        remoteCtx &&
+        webRTCState.remoteStreamExists
+      ) {
+        await detectFeaturesInVideo(
+          remoteVideoRef.current,
+          remoteCanvasRef.current,
+          remoteCtx
+        );
       }
-      
+
       animationFrameId = requestAnimationFrame(animate);
     };
 
@@ -302,14 +358,32 @@ export default function Home() {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [faceLandmarker, handLandmarker, ctx, remoteCtx, webcamRunning, webRTCState.remoteStreamExists]);
+  }, [
+    faceLandmarker,
+    handLandmarker,
+    ctx,
+    remoteCtx,
+    webcamRunning,
+    webRTCState.remoteStreamExists,
+  ]);
 
-  // Add join room handler
+  // Modified join room handler
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
     if (joinRoomId.trim()) {
       setIsJoining(true);
+      setIsInRoom(true);
     }
+  };
+
+  // Add leave room handler
+  const handleLeaveRoom = () => {
+    if (socketRef.current) socketRef.current.disconnect();
+    if (peerConnectionRef.current) peerConnectionRef.current.close();
+    localStreamRef.current?.getTracks().forEach((track) => track.stop());
+    setIsInRoom(false);
+    setIsJoining(false);
+    setWebRTCState({ remoteStreamExists: false, roomId: null });
   };
 
   // Move createOffer inside component
@@ -319,12 +393,12 @@ export default function Home() {
       if (!pc) return;
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      socketRef.current.emit("signal", {
+      socketRef.current.emit('signal', {
         roomId: webRTCState.roomId,
         data: offer,
       });
     } catch (err) {
-      console.error("Error creating offer:", err);
+      console.error('Error creating offer:', err);
     }
   };
 
@@ -349,22 +423,24 @@ export default function Home() {
           </>
         ) : (
           <div className='flex flex-col items-center gap-4 text-gray-400'>
-            {isJoining ? (
-              <div className='text-lg'>
-                Joining Room: {joinRoomId}...
-              </div>
-            ) : webRTCState.roomId ? (
+            {isInRoom ? (
               <>
-                <div className='text-lg'>Share this Room ID:</div>
+                <div className='text-lg'>
+                  {isJoining
+                    ? `Joining Room: ${joinRoomId}`
+                    : 'Share this Room ID:'}
+                </div>
                 <div className='text-xl font-mono bg-gray-700 px-4 py-2 rounded'>
                   {webRTCState.roomId}
                 </div>
+                <button
+                  onClick={handleLeaveRoom}
+                  className='px-4 py-2 bg-red-600 text-white rounded hover:bg-red-500 mt-4'
+                >
+                  Leave Room
+                </button>
               </>
             ) : (
-              <div className='text-lg'>Connecting...</div>
-            )}
-
-            {!isJoining && !webRTCState.roomId && (
               <form onSubmit={handleJoinRoom} className='flex flex-col gap-2'>
                 <input
                   type='text'
@@ -387,10 +463,7 @@ export default function Home() {
 
       {/* Right side - Local video with landmarks */}
       <div className='relative w-full h-full flex items-center justify-center'>
-        <video 
-          ref={videoRef} 
-          className='w-[640px] h-[480px] object-cover'
-        />
+        <video ref={videoRef} className='w-[640px] h-[480px] object-cover' />
         <canvas
           ref={canvasRef}
           width='640'
