@@ -1,101 +1,283 @@
-import Image from "next/image";
+'use client';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  HandLandmarker,
+  FaceLandmarker,
+  FilesetResolver,
+} from '@mediapipe/tasks-vision';
+
+interface FaceLandmark {
+  x: number;
+  y: number;
+}
+
+interface HandLandmark {
+  x: number;
+  y: number;
+  z: number;
+}
+
+interface DetectionResults {
+  faceLandmarks: FaceLandmark[][];
+}
+
+interface HandDetectionResults {
+  landmarks: HandLandmark[][];
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  // Refs to video and canvas elements
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(
+    null
+  );
+  const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(
+    null
+  );
+  const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
+  const [webcamRunning, setWebcamRunning] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    const initializeFaceLandmarker = async () => {
+      try {
+        const filesetResolver = await FilesetResolver.forVisionTasks(
+          '/models/wasm'
+        );
+        const faceLandmarkerInstance = await FaceLandmarker.createFromOptions(
+          filesetResolver,
+          {
+            baseOptions: {
+              modelAssetPath: '/models/face_landmarker.task',
+              delegate: 'GPU',
+            },
+            outputFaceBlendshapes: true,
+            runningMode: 'VIDEO',
+            numFaces: 5,
+          }
+        );
+
+        const handLandmarkerInstance = await HandLandmarker.createFromOptions(
+          filesetResolver,
+          {
+            baseOptions: {
+              modelAssetPath: '/models/hand_landmarker.task',
+              delegate: 'GPU',
+            },
+            runningMode: 'VIDEO',
+            numHands: 4,
+          }
+        );
+
+        setFaceLandmarker(faceLandmarkerInstance);
+        setHandLandmarker(handLandmarkerInstance);
+        // Initialize canvas context
+        const context = canvasRef.current?.getContext('2d');
+        if (context) {
+          context.globalAlpha = 0.8; // Adjust transparency of landmarks
+          setCtx(context);
+        }
+      } catch (error) {
+        console.error('Error initializing FaceLandmarker:', error);
+      }
+    };
+    initializeFaceLandmarker();
+  }, []);
+
+  // Step 2: Start Webcam and Face Detection
+  useEffect(() => {
+    if (faceLandmarker) {
+      const startWebcam = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: 640,
+              height: 480,
+              frameRate: { ideal: 30 },
+            },
+          });
+
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            // Ensure video metadata is loaded
+            videoRef.current.onloadedmetadata = () => {
+              if (videoRef.current) {
+                videoRef.current.play();
+                // Wait a brief moment to ensure video is actually playing
+                setTimeout(() => {
+                  setWebcamRunning(true);
+                }, 100);
+              }
+            };
+          }
+        } catch (err) {
+          console.error('Error accessing webcam:', err);
+        }
+      };
+      startWebcam();
+    }
+  }, [faceLandmarker]);
+
+  // Step 3: Real-time face and hand detection
+  useEffect(() => {
+    let isDetecting = false;
+    let animationFrameId: number;
+    let frameCount = 0;
+
+    const detectFeaturesInVideo = async () => {
+      if (
+        !faceLandmarker ||
+        !handLandmarker ||
+        !ctx ||
+        !webcamRunning ||
+        !canvasRef.current ||
+        !videoRef.current ||
+        isDetecting
+      )
+        return;
+
+      if (
+        videoRef.current.paused ||
+        videoRef.current.ended ||
+        videoRef.current.readyState !== 4
+      )
+        return;
+
+      try {
+        isDetecting = true;
+        const timestamp = performance.now();
+        frameCount++;
+
+        // Detect faces
+        const faceResults = faceLandmarker.detectForVideo(
+          videoRef.current,
+          timestamp
+        ) as DetectionResults;
+
+        // Detect hands
+        const handResults = handLandmarker.detectForVideo(
+          videoRef.current,
+          timestamp
+        ) as HandDetectionResults;
+
+        // Log frame data every 30 frames (approximately once per second at 30fps)
+        if (frameCount % 30 === 0) {
+          const frameData = {
+            timestamp,
+            frameNumber: frameCount,
+            faces: {
+              count: faceResults.faceLandmarks?.length || 0,
+              landmarks: faceResults.faceLandmarks?.map(landmarks => 
+                landmarks.map(point => ({
+                  x: Math.round(point.x * 1000) / 1000,
+                  y: Math.round(point.y * 1000) / 1000
+                }))
+              )
+            },
+            hands: {
+              count: handResults.landmarks?.length || 0,
+              landmarks: handResults.landmarks?.map(landmarks =>
+                landmarks.map(point => ({
+                  x: Math.round(point.x * 1000) / 1000,
+                  y: Math.round(point.y * 1000) / 1000,
+                  z: Math.round(point.z * 1000) / 1000
+                }))
+              )
+            }
+          };
+
+          // Calculate size in bytes
+          const dataSizeBytes = new TextEncoder().encode(JSON.stringify(frameData)).length;
+          const dataSizeKB = Math.round((dataSizeBytes / 1024) * 100) / 100;
+
+          console.log('=== Frame Data ===', {
+            ...frameData,
+            dataSize: {
+              bytes: dataSizeBytes,
+              kilobytes: dataSizeKB
+            }
+          });
+        }
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+        // Draw face landmarks
+        if (faceResults.faceLandmarks) {
+          faceResults.faceLandmarks.forEach((landmarks) => {
+            landmarks.forEach((landmark) => {
+              ctx.beginPath();
+              ctx.arc(
+                landmark.x * canvasRef.current!.width,
+                landmark.y * canvasRef.current!.height,
+                2,
+                0,
+                Math.PI * 2
+              );
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fill();
+            });
+          });
+        }
+
+        // Draw hand landmarks
+        if (handResults.landmarks) {
+          handResults.landmarks.forEach((landmarks) => {
+            landmarks.forEach((landmark) => {
+              ctx.beginPath();
+              ctx.arc(
+                landmark.x * canvasRef.current!.width,
+                landmark.y * canvasRef.current!.height,
+                3,
+                0,
+                Math.PI * 2
+              );
+              ctx.fillStyle = '#00FF00';
+              ctx.fill();
+            });
+          });
+        }
+      } catch (error) {
+        console.error('Error in detection:', error);
+      } finally {
+        isDetecting = false;
+        animationFrameId = requestAnimationFrame(detectFeaturesInVideo);
+      }
+    };
+
+    if (webcamRunning) {
+      detectFeaturesInVideo();
+    }
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
+  }, [faceLandmarker, handLandmarker, ctx, webcamRunning]);
+
+  return (
+    <div className='grid grid-cols-2 items-center justify-center mx-auto h-screen bg-gray-800 gap-4 p-4'>
+      {/* Left side - Reserved for remote video */}
+      <div className='relative w-full h-full flex items-center justify-center'>
+        <div className='text-gray-400 text-lg'>
+          Waiting for connection...
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+
+      {/* Right side - Local video with landmarks */}
+      <div className='relative w-full h-full flex items-center justify-center'>
+        <video 
+          ref={videoRef} 
+          className='w-[640px] h-[480px] object-cover'
+        />
+        <canvas
+          ref={canvasRef}
+          width='640'
+          height='480'
+          className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2'
+        />
+      </div>
     </div>
   );
 }
