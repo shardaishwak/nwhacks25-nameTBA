@@ -28,7 +28,7 @@ export default function RoomPage() {
 		if (!roomId) return; // If the route param isn't ready, do nothing
 
 		// 1) Connect to Socket.IO signaling server
-		socketRef.current = io("http://localhost:5001", {
+		socketRef.current = io("https://nwhacks25-nametba.onrender.com", {
 			transports: ["websocket"],
 		});
 		socketRef.current.on("connect", () => {
