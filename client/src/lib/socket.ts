@@ -58,7 +58,7 @@ export const listenToGameState = (callback: (data: StreamData) => void) => {
 
 // Optional: Helper function to create initial game state
 export const createInitialGameState = (): StreamData => ({
-  video: new MediaStream(),
+  video: typeof window !== 'undefined' ? new MediaStream() : null as any,
   handData: {
     speed: 0,
     position: { x: 0, y: 0 },
