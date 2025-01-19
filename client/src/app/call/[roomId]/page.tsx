@@ -440,6 +440,12 @@ export default function RoomPage() {
 		localHandLandmarker,
 		remoteStreamExists,
 		remoteFaceBoundingBox,
+		localFaceCtx,
+		localHandCtx,
+		roomId,
+		remoteFaceCtx,
+		remoteHandCtx,
+		localFaceBoundingBox,
 	]);
 
 	// 3) WebRTC + Socket.IO logic
