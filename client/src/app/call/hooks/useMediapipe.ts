@@ -263,7 +263,7 @@ export default function useMediapipe({
 	// 	});
 	// }, [socketRef, cachedRemote]);
 
-	const runFaceRemote = async (data: DetectionResults, timestamp: number) => {
+	const runFaceRemote = async (data: DetectionResults) => {
 		const faceResults = data as DetectionResults;
 		if (faceResults?.faceLandmarks?.[0]) {
 			const faceLm = faceResults.faceLandmarks[0];
@@ -333,7 +333,7 @@ export default function useMediapipe({
 	useEffect(() => {
 		socketRef?.current?.on("update", ({ data }) => {
 			const handResults = data?.handResults as HandDetectionResults;
-			runFaceRemote(data?.faceResults as DetectionResults, data.timestamp);
+			runFaceRemote(data?.faceResults as DetectionResults);
 			runHandRemote(handResults, data.timestamp);
 		});
 	}, [socketRef, runFaceRemote, runHandRemote, setLocalFaceBoundingBox]);
