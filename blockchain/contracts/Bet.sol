@@ -83,10 +83,6 @@ contract Bet is Ownable {
         }
     }
 
-    function getBetDetails() external view returns (BetDetails memory) {
-        return betDetails;
-    }
-
     function fund() external payable {
         if (msg.value != betDetails.amount) {
             revert InvalidAmount();
