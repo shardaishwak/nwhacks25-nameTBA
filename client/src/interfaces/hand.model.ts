@@ -42,5 +42,3 @@ export interface MovementData {
     velocity: number;
     direction: number;
 }
-
-

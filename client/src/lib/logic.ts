@@ -1,11 +1,13 @@
-import { HandData, FaceData, HandLandmark, FaceLandmark, Point, BoundingBox } from '../interfaces/hand.model';
+import { DamageData } from '@/interfaces/stats.model';
+import { HandData, FaceData, HandLandmark, FaceLandmark, Point, BoundingBox, } from '../interfaces/hand.model';
+import { Powerup } from '@/interfaces/attack.model';
 
 export function convertHandLandmarksToBoundingBox(landmarks: HandLandmark[]): HandData['boundingBox'] {
     let minX = Infinity, minY = Infinity;
     let maxX = -Infinity, maxY = -Infinity;
-    let top: HandLandmark = landmarks[0], 
-        bottom: HandLandmark = landmarks[0], 
-        left: HandLandmark = landmarks[0], 
+    let top: HandLandmark = landmarks[0],
+        bottom: HandLandmark = landmarks[0],
+        left: HandLandmark = landmarks[0],
         right: HandLandmark = landmarks[0];
 
     landmarks.forEach(landmark => {
@@ -66,26 +68,16 @@ export function calculateVelocity(
 
     const currentCenter = getBoundingBoxCenter(currentBox);
     const previousCenter = getBoundingBoxCenter(previousBox);
-    
+
     const dx = currentCenter.x - previousCenter.x;
     const dy = currentCenter.y - previousCenter.y;
-    
+
     // Calculate distance between centers
     const distance = Math.sqrt(dx * dx + dy * dy);
-    
-//     // Calculate size change (expansion/contraction)
-//     const currentWidth = currentBox.bottomRight.x - currentBox.topLeft.x;
-//     const currentHeight = currentBox.bottomRight.y - currentBox.topLeft.y;
-//     const previousWidth = previousBox.bottomRight.x - previousBox.topLeft.x;
-//     const previousHeight = previousBox.bottomRight.y - previousBox.topLeft.y;
-    
-//     const sizeChange = Math.abs(
-//         (currentWidth * currentHeight) - (previousWidth * previousHeight)
-//     );
-    
+
     // Combine linear movement and size change for final velocity
     const totalChange = distance; // Adjust weight of size change
-    
+
     const velocity = totalChange / timeElapsed; // units per millisecond
 
     return velocity;
@@ -97,13 +89,13 @@ export function calculateDirection(
 ): number {
     const currentCenter = getBoundingBoxCenter(currentBox);
     const previousCenter = getBoundingBoxCenter(previousBox);
-    
+
     const dx = currentCenter.x - previousCenter.x;
     const dy = currentCenter.y - previousCenter.y;
-    
+
     // Calculate angle in degrees (-180 to +180)
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    
+
     return angle;
 }
 
@@ -112,7 +104,7 @@ export function checkCollision(box1: BoundingBox, box2: BoundingBox, shouldMirro
     // When checking collisions between local and remote elements, we need to mirror one of them
     const x1 = shouldMirror ? 1 - box1.bottomRight.x : box1.topLeft.x;
     const x2 = shouldMirror ? 1 - box1.topLeft.x : box1.bottomRight.x;
-    
+
     return (
         x1 < box2.bottomRight.x &&
         x2 > box2.topLeft.x &&
@@ -121,3 +113,22 @@ export function checkCollision(box1: BoundingBox, box2: BoundingBox, shouldMirro
     );
 }
 
+export function calculateDamage(velocity: number, powerups: Powerup[] = []): DamageData {
+
+    const isCritical = Math.random() < 0.1; // 10% chance of critical hit
+    const baseDamage = velocity * (isCritical ? 2 : 1); // Double damage on critical hit
+    let finalDamage = baseDamage;
+
+    if (powerups.length > 0) {
+        finalDamage = powerups.reduce((damage: number, powerup) => {
+            return powerup.scaling_function(damage);
+        }, baseDamage);
+    }
+
+    return {
+        damage: finalDamage,
+        isCritical,
+        velocity,
+        powerups
+    };
+}
