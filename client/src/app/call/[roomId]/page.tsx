@@ -349,12 +349,12 @@ export default function RoomPage() {
 					const remoteTimestamp = Math.round(timestamp) + 1;
 
 					// Process face and hand detections sequentially
-					const faceResults = (await localFaceLandmarker.detectForVideo(
+					const faceResults = (await remoteFaceLandmarker.detectForVideo(
 						video,
 						remoteTimestamp
 					)) as DetectionResults;
 
-					const handResults = (await localHandLandmarker.detectForVideo(
+					const handResults = (await remoteHandLandmarker.detectForVideo(
 						video,
 						remoteTimestamp
 					)) as HandDetectionResults;
