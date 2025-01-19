@@ -83,13 +83,11 @@ export default function CallPage() {
       </div>
 
       {/* Floating local video container */}
-      <div className="absolute top-4 right-4 w-72 aspect-video rounded-lg overflow-hidden shadow-lg">
-        <LocalVideoSection
-          localVideoRef={localVideoRef}
-          localFaceCanvasRef={localFaceCanvasRef}
-          remoteHandCanvasRef={remoteHandCanvasRef}
-        />
-      </div>
+      <LocalVideoSection
+        localVideoRef={localVideoRef}
+        localFaceCanvasRef={localFaceCanvasRef}
+        remoteHandCanvasRef={remoteHandCanvasRef}
+      />
 
       {/* Bottom stats overlay */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full">
