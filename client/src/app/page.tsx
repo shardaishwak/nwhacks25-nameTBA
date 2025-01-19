@@ -14,6 +14,7 @@ export default function Home() {
       router.push(`/call/${roomId}`);
     }
   };
+  
 
   const handleCreateRoom = () => {
     const newRoomId = Math.random().toString(36).substring(7);
