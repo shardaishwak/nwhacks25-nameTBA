@@ -99,7 +99,7 @@ export default function RoomPage() {
 				"/models/wasm"
 			);
 
-			const faceLandmarkerInstance = await FaceLandmarker.createFromOptions(
+			const localFaceLandmarkerInstance = await FaceLandmarker.createFromOptions(
 				filesetResolver,
 				{
 					baseOptions: {
@@ -112,7 +112,7 @@ export default function RoomPage() {
 				}
 			);
 
-			const handLandmarkerInstance = await HandLandmarker.createFromOptions(
+			const localHandLandmarkerInstance = await HandLandmarker.createFromOptions(
 				filesetResolver,
 				{
 					baseOptions: {
@@ -124,11 +124,38 @@ export default function RoomPage() {
 				}
 			);
 
-			setLocalFaceLandmarker(faceLandmarkerInstance);
-			setLocalHandLandmarker(handLandmarkerInstance);
+			const remoteFaceLandmarkerInstance = await FaceLandmarker.createFromOptions(
+				filesetResolver,
+				{
+					baseOptions: {
+						modelAssetPath: "/models/face_landmarker.task",
+						delegate: "GPU",
+					},
+					outputFaceBlendshapes: false,
+					runningMode: "VIDEO",
+					numFaces: 1,
+				}
+			);
 
-			setRemoteFaceLandmarker(faceLandmarkerInstance);
-			setRemoteHandLandmarker(handLandmarkerInstance);
+			const remoteHandLandmarkerInstance = await HandLandmarker.createFromOptions(
+				filesetResolver,
+				{
+					baseOptions: {
+						modelAssetPath: "/models/hand_landmarker.task",
+						delegate: "GPU",
+					},
+					runningMode: "VIDEO",
+					numHands: 1,
+				}
+			);
+
+
+
+			setLocalFaceLandmarker(localFaceLandmarkerInstance);
+			setLocalHandLandmarker(localHandLandmarkerInstance);
+
+			setRemoteFaceLandmarker(remoteFaceLandmarkerInstance);
+			setRemoteHandLandmarker(remoteHandLandmarkerInstance);
 
 			// Set canvas contexts
 			if (localFaceCanvasRef.current) {
@@ -295,20 +322,22 @@ export default function RoomPage() {
 					remoteStreamExists &&
 					remoteVideoRef.current &&
 					!remoteVideoRef.current.paused &&
-					!remoteVideoRef.current.ended
+					!remoteVideoRef.current.ended &&
+					remoteFaceLandmarker && 
+					remoteHandLandmarker // Add checks for remote landmarkers
 				) {
 					const video = remoteVideoRef.current;
 					
 					// Use a slightly offset timestamp for remote processing
 					const remoteTimestamp = Math.round(timestamp) + 1;
 
-					// Process face and hand detections sequentially
-					const faceResults = await localFaceLandmarker.detectForVideo(
+					 // Use remote landmarker instances instead of local ones
+					const faceResults = await remoteFaceLandmarker.detectForVideo(
 						video,
 						remoteTimestamp
 					) as DetectionResults;
 
-					const handResults = await localHandLandmarker.detectForVideo(
+					const handResults = await remoteHandLandmarker.detectForVideo(
 						video,
 						remoteTimestamp
 					) as HandDetectionResults;
@@ -392,7 +421,7 @@ export default function RoomPage() {
 				cancelAnimationFrame(animationFrameId);
 			}
 		};
-	}, [localFaceLandmarker, localHandLandmarker, remoteStreamExists]);
+	}, [localFaceLandmarker, localHandLandmarker, remoteFaceLandmarker, remoteHandLandmarker, remoteStreamExists]);
 
 	// 3) WebRTC + Socket.IO logic
 	useEffect(() => {
