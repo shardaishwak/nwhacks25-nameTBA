@@ -1,7 +1,6 @@
 // components/LocalVideoSection.tsx
 
 import React, { RefObject, useEffect } from 'react';
-import { useDraggable } from '@/hooks/useDraggable';
 
 interface LocalVideoSectionProps {
   localVideoRef: RefObject<HTMLVideoElement>;
@@ -14,36 +13,14 @@ export default function LocalVideoSection({
   localFaceCanvasRef,
   remoteHandCanvasRef,
 }: LocalVideoSectionProps) {
-  const {
-    position,
-    isDragging,
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
-  } = useDraggable({ x: window.innerWidth - 300, y: 20 });
-
-  useEffect(() => {
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   return (
     <div
-      className="relative rounded-lg overflow-hidden shadow-lg cursor-grab select-none"
+      className="fixed rounded-lg overflow-hidden shadow-lg cursor-grab select-none top-4 right-4 aspect-auto"
       style={{
-        position: 'fixed',
-        left: `${position.x}px`,
-        top: `${position.y}px`,
         width: '300px',
         zIndex: 50,
       }}
-      onMouseDown={handleMouseDown}
     >
       {/* Local video (mirrored) */}
       <video
