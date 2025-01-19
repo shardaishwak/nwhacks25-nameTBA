@@ -1,9 +1,7 @@
-import { Socket } from "socket.io";
+import { Socket, Server } from "socket.io";
 import { calculateDamage } from './utils/damage';
-
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
+import express from "express";
+import http from "http";
 
 const app = express();
 const server = http.createServer(app);
