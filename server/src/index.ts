@@ -32,6 +32,27 @@ io.on("connection", (socket: Socket) => {
 		});
 	});
 
+	// socket.on("face", ({ roomId, data }) => {
+	// 	// send to everyone except the sender
+	// 	socket.broadcast.to(roomId).emit("face", {
+	// 		from: socket.id,
+	// 		data,
+	// 	});
+	// });
+
+	socket.on("update", ({ roomId, data }) => {
+		socket.broadcast.to(roomId).emit("update", {
+			from: socket.id,
+			data,
+		});
+	});
+
+	// socket.on("hand", ({ roomId, data }) => {
+	// 	socket.broadcast.to(roomId).emit("face", {
+	// 		from: socket.id,
+	// 		data,
+	// 	});
+	// });
 	socket.on("disconnect", () => {
 		console.log(`Socket disconnected: ${socket.id}`);
 	});
