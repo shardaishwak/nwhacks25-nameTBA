@@ -41,12 +41,6 @@ export default function RoomPage() {
 	const localVideoRef = useRef<HTMLVideoElement>(null);
 	const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
-	// Canvas for merging
-	const canvasRef = useRef<HTMLCanvasElement>(null);
-
-	// Final merged <video>
-	const mergedVideoRef = useRef<HTMLVideoElement>(null);
-
 	// New refs for landmark detection
 	const localCanvasRef = useRef<HTMLCanvasElement>(null);
 	const remoteCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -258,7 +252,14 @@ export default function RoomPage() {
 
 		// 8) Set up local stream first
 		navigator.mediaDevices
-			.getUserMedia({ video: true, audio: true })
+			.getUserMedia({ 
+				video: { 
+					width: { ideal: 640 },
+					height: { ideal: 480 },
+					frameRate: { ideal: 30 }
+				}, 
+				audio: true 
+			})
 			.then((stream) => {
 				if (localVideoRef.current) {
 					localVideoRef.current.srcObject = stream;
@@ -334,73 +335,38 @@ export default function RoomPage() {
 		}
 	}
 
-	// -----------------------
-	// MERGING THE TWO FEEDS
-	// -----------------------
-	useEffect(() => {
-		const canvas = canvasRef.current;
-		if (!canvas) return;
-		const ctx = canvas.getContext("2d");
-		if (!ctx) return;
-
-		// We'll do 320x240 for each feed side by side
-		canvas.width = 640;
-		canvas.height = 240;
-
-		const fps = 30;
-		const interval = setInterval(() => {
-			if (!localVideoRef.current || !remoteVideoRef.current) return;
-
-			// Draw local left
-			ctx.drawImage(localVideoRef.current, 0, 0, 320, 240);
-
-			// Draw remote right (if available)
-			if (remoteStreamExists) {
-				ctx.drawImage(remoteVideoRef.current, 320, 0, 320, 240);
-			}
-		}, 1000 / fps);
-
-		// Capture the canvas as a stream
-		const mergedStream = canvas.captureStream(fps);
-		if (mergedVideoRef.current) {
-			mergedVideoRef.current.srcObject = mergedStream;
-		}
-
-		return () => clearInterval(interval);
-	}, [remoteStreamExists]);
-
 	return (
 		<div className="grid grid-cols-2 gap-4 p-4 h-screen bg-gray-800">
 			{/* Local Video Container */}
-			<div className="relative">
+			<div className="relative w-[640px] h-[480px] mx-auto">
 				<video
 					ref={localVideoRef}
 					muted
 					autoPlay
 					playsInline
-					className="w-full h-full object-cover"
+					className="w-full h-full object-cover bg-gray-900 rounded-lg"
 				/>
 				<canvas
 					ref={localCanvasRef}
 					width={640}
 					height={480}
-					className="absolute top-0 left-0 w-full h-full"
+					className="absolute top-0 left-0 w-full h-full rounded-lg"
 				/>
 			</div>
 
 			{/* Remote Video Container */}
-			<div className="relative">
+			<div className="relative w-[640px] h-[480px] mx-auto">
 				<video
 					ref={remoteVideoRef}
 					autoPlay
 					playsInline
-					className="w-full h-full object-cover"
+					className="w-full h-full object-cover bg-gray-900 rounded-lg"
 				/>
 				<canvas
 					ref={remoteCanvasRef}
 					width={640}
 					height={480}
-					className="absolute top-0 left-0 w-full h-full"
+					className="absolute top-0 left-0 w-full h-full rounded-lg"
 				/>
 			</div>
 		</div>
