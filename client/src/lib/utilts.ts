@@ -30,10 +30,10 @@ export function renderVisual(fileName: SoundFile) {
 	const visualUrl = `/visuals/${fileName}.webp`;
 
 	// Create or update the visual element in the DOM
-	let visualElement = document.getElementById("audio-visual");
+	let visualElement = document.getElementById("audio-visual") as HTMLImageElement;
 
 	if (!visualElement) {
-		visualElement = document.createElement("img");
+		visualElement = document.createElement("img") as HTMLImageElement;
 		visualElement.id = "audio-visual";
 		visualElement.style.position = "fixed";
 		visualElement.style.top = "50%";

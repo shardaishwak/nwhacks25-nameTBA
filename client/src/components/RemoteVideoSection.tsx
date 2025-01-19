@@ -1,6 +1,7 @@
 // components/RemoteVideoSection.tsx
 
 import React, { RefObject } from 'react';
+import { useHeightScaling } from '@/hooks/useHeightScaling';
 
 interface RemoteVideoSectionProps {
   remoteVideoRef: RefObject<HTMLVideoElement>;
@@ -15,14 +16,21 @@ export default function RemoteVideoSection({
   remoteFaceCanvasRef,
   localHandCanvasRef,
 }: RemoteVideoSectionProps) {
+  const scale = useHeightScaling();
+  
+  const containerStyle = {
+    width: `${640 * scale}px`,
+    height: `${480 * scale}px`,
+  };
+
   return (
-    <div className="relative w-[640px] h-[480px] mx-auto">
+    <div className="relative mx-auto rounded-lg overflow-hidden shadow-lg" style={containerStyle}>
       {/* Remote video (mirrored) */}
       <video
         ref={remoteVideoRef}
         autoPlay
         playsInline
-        className="w-full h-full object-cover bg-gray-900 rounded-lg"
+        className="absolute top-0 left-0 w-full h-full object-contain bg-gray-900 rounded-lg"
         style={{ transform: 'scaleX(-1)' }}
       />
       {/* If no remote stream yet, overlay a waiting message */}
