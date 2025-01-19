@@ -436,6 +436,7 @@ export default function RoomPage() {
 					autoPlay
 					playsInline
 					className="w-full h-full object-cover bg-gray-900 rounded-lg"
+					style={{ transform: "scaleX(-1)" }}
 				/>
 
 				{/* Local Face Canvas */}
@@ -444,6 +445,7 @@ export default function RoomPage() {
 					width={640}
 					height={480}
 					className="absolute top-0 left-0 w-full h-full rounded-lg pointer-events-none"
+					style={{ transform: "scaleX(-1)" }}
 				/>
 
 				{/* Local Hand Canvas */}
@@ -452,6 +454,7 @@ export default function RoomPage() {
 					width={640}
 					height={480}
 					className="absolute top-0 left-0 w-full h-full rounded-lg pointer-events-none"
+					style={{ transform: "scaleX(-1)" }}
 				/>
 			</div>
 
@@ -462,6 +465,7 @@ export default function RoomPage() {
 					autoPlay
 					playsInline
 					className="w-full h-full object-cover bg-gray-900 rounded-lg"
+					style={{ transform: "scaleX(-1)" }}
 				/>
 
 				{/* Remote Face Canvas */}
@@ -470,6 +474,7 @@ export default function RoomPage() {
 					width={640}
 					height={480}
 					className="absolute top-0 left-0 w-full h-full rounded-lg pointer-events-none"
+					style={{ transform: "scaleX(-1)" }}
 				/>
 
 				{/* Remote Hand Canvas */}
@@ -478,6 +483,7 @@ export default function RoomPage() {
 					width={640}
 					height={480}
 					className="absolute top-0 left-0 w-full h-full rounded-lg pointer-events-none"
+					style={{ transform: "scaleX(-1)" }}
 				/>
 			</div>
 		</div>
