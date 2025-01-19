@@ -118,7 +118,7 @@ export default function useMediapipe({
 		useState<BoundingBox | null>(null);
 
 	// Add a ref for localFaceBoundingBox
-	const localFaceBoundingBoxRef = useRef<BoundingBox | null>(null);
+	// const localFaceBoundingBoxRef = useRef<BoundingBox | null>(null);
 
 	// -----------------------------------------
 	// 1) Initialize Mediapipe Face & Hand
@@ -387,14 +387,14 @@ export default function useMediapipe({
 						roundedTimestamp
 					)) as HandDetectionResults;
 
-					socketRef.current?.emit("update", {
-						roomId,
-						data: {
-							faceResults,
-							handResults,
-							timestamp,
-						},
-					});
+					// socketRef.current?.emit("update", {
+					// 	roomId,
+					// 	data: {
+					// 		faceResults,
+					// 		handResults,
+					// 		timestamp,
+					// 	},
+					// });
 
 					// 1) Track local face bounding box
 					if (faceResults?.faceLandmarks?.[0]) {
