@@ -1,45 +1,26 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { io } from "socket.io-client";
 import {
-	HandLandmarker,
-	FaceLandmarker,
-	FilesetResolver,
+    HandLandmarker,
+    FaceLandmarker,
+    FilesetResolver,
 } from "@mediapipe/tasks-vision";
+import { 
+    convertHandLandmarksToBoundingBox, 
+    convertFaceLandmarksToBoundingBox,
+    calculateVelocity,
+    calculateDirection,
+    checkCollision 
+} from '@/lib/logic';
+import { HandData, FaceData, HandLandmark, FaceLandmark, DetectionResults, HandDetectionResults, BoundingBox } from '@/interfaces/hand.model';
 
-interface FaceLandmark {
-	x: number;
-	y: number;
-}
-
-interface HandLandmark {
-	x: number;
-	y: number;
-	z: number;
-}
-
-interface DetectionResults {
-	faceLandmarks: FaceLandmark[][];
-}
-
-interface HandDetectionResults {
-	landmarks: HandLandmark[][];
-}
-
-interface BoundingBox {
-	topRight: FaceLandmark;
-	bottomLeft: FaceLandmark;
-}
-
-interface HandEdgePoints {
-	thumb: HandLandmark;
-	indexFinger: HandLandmark;
-	pinky: HandLandmark;
-	wrist: HandLandmark;
+// Add this interface near the top with other imports
+interface TimestampedPosition {
+    box: BoundingBox;
+    timestamp: number;
 }
 
 export default function RoomPage() {
@@ -82,6 +63,13 @@ export default function RoomPage() {
 
 	// Track if we have a remote stream
 	const [remoteStreamExists, setRemoteStreamExists] = useState(false);
+
+	// Change from useState to useRef
+	const previousHandPositionRef = useRef<TimestampedPosition | null>(null);
+	// Keep the state for UI updates
+	const [handSpeed, setHandSpeed] = useState<number>(0);
+	const [handDirection, setHandDirection] = useState<number>(0);
+	const [isColliding, setIsColliding] = useState<boolean>(false);
 
 	// 1) Initialize Mediapipe tasks & canvas contexts
 	useEffect(() => {
@@ -155,12 +143,21 @@ export default function RoomPage() {
 	// 2) Per-frame detection
 	useEffect(() => {
 		let animationFrameId: number;
+		let lastProcessedTimestamp = 0;
 
 		const animate = async () => {
 			if (!faceLandmarker || !handLandmarker) {
 				animationFrameId = requestAnimationFrame(animate);
 				return;
 			}
+
+			const timestamp = performance.now();
+
+			 // Only process if enough time has passed (e.g., every 16ms for 60fps)
+            if (timestamp - lastProcessedTimestamp < 16) {
+                animationFrameId = requestAnimationFrame(animate);
+                return;
+            }
 
 			// --- Detect and draw for LOCAL video ---
 			if (
@@ -169,7 +166,6 @@ export default function RoomPage() {
 				!localVideoRef.current.ended
 			) {
 				const video = localVideoRef.current;
-				const timestamp = performance.now();
 
 				const faceResults = faceLandmarker.detectForVideo(
 					video,
@@ -179,6 +175,58 @@ export default function RoomPage() {
 					video,
 					timestamp
 				) as HandDetectionResults;
+
+				console.log(handResults);
+				
+				// Process hand movements and collisions
+				if (handResults?.landmarks && handResults.landmarks.length > 0) {
+					// Only process the first hand (index 0)
+					const handLandmarks = handResults.landmarks[0];
+					const currentHandBox = convertHandLandmarksToBoundingBox(handLandmarks);
+					const currentPosition: TimestampedPosition = {
+						box: currentHandBox,
+						timestamp
+					};
+
+					console.log(previousHandPositionRef.current);
+					
+					const previous = previousHandPositionRef.current;
+                    
+                    if (previous && (timestamp - previous.timestamp) > 0) {
+                        const velocity = calculateVelocity(
+                            currentPosition.box,
+                            previous.box,
+                            timestamp - previous.timestamp
+                        );
+                        const direction = calculateDirection(currentPosition.box, previous.box);
+
+                        // Scale velocity to make it more readable
+                        setHandSpeed(velocity * 1000);
+                        setHandDirection(direction);
+
+                        // Process face collision
+                        if (faceResults?.faceLandmarks?.[0]) {
+                            const faceLandmarks = faceResults.faceLandmarks[0];
+                            const faceBox = convertFaceLandmarksToBoundingBox(faceLandmarks);
+                            const collision = checkCollision(currentPosition.box, faceBox);
+                            setIsColliding(collision);
+
+                            if (collision) {
+                                socketRef.current?.emit('collision', {
+                                    roomId,
+                                    data: {
+                                        speed: velocity,
+                                        direction,
+                                        timestamp
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    // Update the ref with current position
+                    previousHandPositionRef.current = currentPosition;
+                }
 
 				// Draw face landmarks on localFaceCanvas
 				if (localFaceCtx && localFaceCanvasRef.current) {
@@ -213,7 +261,6 @@ export default function RoomPage() {
 				!remoteVideoRef.current.ended
 			) {
 				const video = remoteVideoRef.current;
-				const timestamp = performance.now();
 
 				const faceResults = faceLandmarker.detectForVideo(
 					video,
@@ -249,15 +296,18 @@ export default function RoomPage() {
 				}
 			}
 
-			animationFrameId = requestAnimationFrame(animate);
-		};
+			lastProcessedTimestamp = timestamp;
+            animationFrameId = requestAnimationFrame(animate);
+        };
 
-		animate();
+        animate();
 
-		return () => {
-			if (animationFrameId) cancelAnimationFrame(animationFrameId);
-		};
-	}, [faceLandmarker, handLandmarker, remoteStreamExists]);
+        return () => {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+        };
+    }, [faceLandmarker, handLandmarker, remoteStreamExists]);
 
 	// 3) WebRTC + Socket.IO logic
 	useEffect(() => {
@@ -594,6 +644,38 @@ export default function RoomPage() {
 					className="absolute top-0 left-0 w-full h-full rounded-lg pointer-events-none"
 					style={{ transform: "scaleX(1)" }}
 				/>
+			</div>
+
+			{/* Add this stats overlay */}
+			<div className="absolute top-4 left-4 bg-black/50 p-4 rounded-lg text-white font-mono">
+				<div className="flex flex-col gap-2">
+					<div>
+						Speed: {handSpeed.toFixed(2)} units/ms
+						<div className="w-32 h-2 bg-gray-700 rounded">
+							<div 
+								className="h-full bg-green-500 rounded transition-all"
+								style={{ width: `${Math.min(handSpeed * 100, 100)}%` }}
+							/>
+						</div>
+					</div>
+					<div>
+						Direction: {handDirection.toFixed(0)}°
+						<div className="relative w-8 h-8">
+							<div 
+								className="absolute w-6 h-1 bg-blue-500 origin-left"
+								style={{ 
+									transform: `rotate(${handDirection}deg)`,
+									transformOrigin: 'center'
+								}}
+							/>
+						</div>
+					</div>
+					<div>
+						Collision: <span className={isColliding ? "text-red-500" : "text-green-500"}>
+							{isColliding ? "YES" : "NO"}
+						</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	);
