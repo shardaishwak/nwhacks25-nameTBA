@@ -1,11 +1,12 @@
 export interface Point {
-    x: number;
-    y: number;
+  x: number;
+  y: number;
 }
 
 export interface BoundingBox {
-    topLeft: Point;
-    bottomRight: Point;
+  topLeft: Point;
+  bottomRight: Point;
+  z?: number;
 }
 
 export interface FaceLandmark {
@@ -28,17 +29,17 @@ export interface HandDetectionResults {
 }
 
 export interface HandData {
-    speed: number;
-    boundingBox: BoundingBox;
-    direction: number;
-    powerup: boolean;
+  speed: number;
+  boundingBox: BoundingBox;
+  direction: number;
+  powerup: boolean;
 }
 
 export interface FaceData {
-    boundingBox: BoundingBox;
+  boundingBox: BoundingBox;
 }
 
 export interface MovementData {
-    velocity: number;
-    direction: number;
+  velocity: number;
+  direction: number;
 }

@@ -9,6 +9,7 @@ export function convertHandLandmarksToBoundingBox(landmarks: HandLandmark[]): Ha
         bottom: HandLandmark = landmarks[0],
         left: HandLandmark = landmarks[0],
         right: HandLandmark = landmarks[0];
+    let zIndexTotal = 0;
 
     landmarks.forEach(landmark => {
         if (landmark.x < minX) {
@@ -27,11 +28,13 @@ export function convertHandLandmarksToBoundingBox(landmarks: HandLandmark[]): Ha
             maxY = landmark.y;
             bottom = landmark;
         }
+        zIndexTotal += landmark.z;
     });
 
     return {
         topLeft: { x: left.x, y: top.y },
-        bottomRight: { x: right.x, y: bottom.y }
+        bottomRight: { x: right.x, y: bottom.y },
+        z: zIndexTotal / landmarks.length
     };
 }
 
@@ -71,14 +74,13 @@ export function calculateVelocity(
 
     const dx = currentCenter.x - previousCenter.x;
     const dy = currentCenter.y - previousCenter.y;
+    const dz = (currentBox.z ?? 0) - (previousBox.z ?? 0); // Handle optional z values
 
-    // Calculate distance between centers
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    // Calculate distance between centers including z-axis
+    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-    // Combine linear movement and size change for final velocity
-    const totalChange = distance; // Adjust weight of size change
-
-    const velocity = totalChange / timeElapsed; // units per millisecond
+    // Combine linear movement for final velocity
+    const velocity = distance / timeElapsed; // units per millisecond
 
     return velocity;
 }
