@@ -1,3 +1,4 @@
+
 export interface ItemData {
     scaling_function: (input: number) => number;
     details: ItemDetails;
