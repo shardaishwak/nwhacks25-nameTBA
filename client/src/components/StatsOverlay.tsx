@@ -47,13 +47,15 @@ export default function StatsOverlay({
   }, [isRemoteColliding, remoteHandSpeed]);
 
   return (
-    <div className="absolute top-4 left-4 bg-black/50 p-4 rounded-lg text-white font-mono">
+    <div className="bg-black/50 p-4 rounded-lg text-white font-mono">
       <div className="grid grid-cols-2 gap-4">
 
         {/* Local Stats */}
         <div className="flex flex-col gap-2">
           <h3 className="font-bold">Local</h3>
-          <HealthScoreIcon score={Math.floor(localHealth/10)} color="blue" />
+          <div className='w-full'>
+            <HealthScoreIcon score={Math.floor(localHealth / 10)} color="blue" />
+          </div>
           <div>
             Speed: {handSpeed.toFixed(2)} units/ms
             <div className="w-32 h-2 bg-gray-700 rounded">
@@ -73,9 +75,9 @@ export default function StatsOverlay({
         </div>
 
         {/* Remote Stats */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 w-full items-end">
           <h3 className="font-bold">Remote</h3>
-          <HealthScoreIcon score={Math.floor(remoteHealth/10)} color="red" />
+          <HealthScoreIcon score={Math.floor(remoteHealth / 10)} color="red" />
           <div>
             Speed: {remoteHandSpeed.toFixed(2)} units/ms
             <div className="w-32 h-2 bg-gray-700 rounded">
@@ -95,6 +97,7 @@ export default function StatsOverlay({
             </span>
           </div>
         </div>
+
       </div>
     </div>
   );

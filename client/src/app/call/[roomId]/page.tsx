@@ -62,16 +62,9 @@ export default function CallPage() {
   });
 
   return (
-    <div className="relative w-full h-screen bg-gray-800">
-      <div className="grid grid-cols-2 gap-4 p-4">
-        {/* LOCAL side */}
-        <LocalVideoSection
-          localVideoRef={localVideoRef}
-          localFaceCanvasRef={localFaceCanvasRef}
-          remoteHandCanvasRef={remoteHandCanvasRef}
-        />
-
-        {/* REMOTE side */}
+    <div className="w-full h-screen bg-gray-800 relative">
+      {/* Main remote video container */}
+      <div className="w-full h-full">
         <RemoteVideoSection
           remoteVideoRef={remoteVideoRef}
           remoteStreamExists={remoteStreamExists}
@@ -80,13 +73,25 @@ export default function CallPage() {
         />
       </div>
 
-      {/* Stats HUD */}
-      <StatsOverlay
-        handSpeed={handSpeed}
-        isColliding={isColliding}
-        remoteHandSpeed={remoteHandSpeed}
-        isRemoteColliding={isRemoteColliding}
-      />
+      {/* Floating local video container */}
+      <div className="absolute top-4 right-4 w-72 aspect-video rounded-lg overflow-hidden shadow-lg">
+        <LocalVideoSection
+          localVideoRef={localVideoRef}
+          localFaceCanvasRef={localFaceCanvasRef}
+          remoteHandCanvasRef={remoteHandCanvasRef}
+        />
+      </div>
+
+      {/* Bottom stats overlay */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full">
+        <StatsOverlay
+          handSpeed={handSpeed}
+          isColliding={isColliding}
+          remoteHandSpeed={remoteHandSpeed}
+          isRemoteColliding={isRemoteColliding}
+          
+        />
+      </div>
     </div>
   );
 }
