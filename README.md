@@ -19,3 +19,22 @@ For the text to show, we can use GPT
 
 - Live stream the video with the Aquareum.tv
 - Make blockchain smart contract for health score calculation and payment management (security)
+
+
+
+# Technologies Used
+- MediaPipe: Used for detecting facial landmarks and hand skeletons to construct real-time models for further analysis. Provided by Google, this framework was instrumental in building the foundation for facial and hand tracking.
+
+- Next.js: Integrated the frontend with the smart contracts and machine learning models for facial detection. Centralized all application logic, enabling seamless interaction between users and backend systems.
+
+- WebRTC (Peer-to-Peer Connection): Implemented from scratch to enable live video calls between users. Ensured minimal latency during gameplay while overlaying skeleton models on top of users' faces.
+
+- Express.js and Socket.IO: Facilitated synchronization of keypoints and shared data across players. Enabled real-time communication for a smooth multiplayer experience.
+
+- Render.com: Used for deploying the backend server to ensure reliable and scalable performance.
+
+- Vercel: Deployed the frontend application, ensuring fast and consistent delivery of the user interface.
+
+- Solidity and Hardhat: Developed smart contracts, including BidFactory and Bid, to handle bidding logic securely. Utilized Chai and Mocha for rigorous testing of smart contracts. Implemented an RPC protocol to connect the smart contracts with the frontend seamlessly.
+
+- Stream.place: Enabled live streaming of the game directly on the website. Provided players and spectators with a seamless and interactive viewing experience.
