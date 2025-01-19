@@ -1,4 +1,5 @@
 import { ItemData } from "./attack.model";
+import { HandData } from "./hand.model";
 import { HealthData } from "./stats.model";
 
 export interface StreamData {
@@ -17,12 +18,3 @@ export interface VideoTrackData {
     readyState: string;
 }
 
-export interface HandData {
-    speed: number;
-    position: {
-        x: number;
-        y: number;
-    };
-    direction: string;
-    powerup: boolean;
-}

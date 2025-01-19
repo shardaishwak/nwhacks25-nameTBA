@@ -1,5 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
@@ -10,36 +12,19 @@ import {
 	FaceLandmarker,
 	FilesetResolver,
 } from "@mediapipe/tasks-vision";
+import {
+	convertHandLandmarksToBoundingBox,
+	convertFaceLandmarksToBoundingBox,
+	calculateVelocity,
+	calculateDirection,
+	checkCollision
+} from '@/lib/logic';
+import { HandData, FaceData, HandLandmark, FaceLandmark, DetectionResults, HandDetectionResults, BoundingBox } from '@/interfaces/hand.model';
 
-interface FaceLandmark {
-	x: number;
-	y: number;
-}
-
-interface HandLandmark {
-	x: number;
-	y: number;
-	z: number;
-}
-
-interface DetectionResults {
-	faceLandmarks: FaceLandmark[][];
-}
-
-interface HandDetectionResults {
-	landmarks: HandLandmark[][];
-}
-
-interface BoundingBox {
-	topRight: FaceLandmark;
-	bottomLeft: FaceLandmark;
-}
-
-interface HandEdgePoints {
-	thumb: HandLandmark;
-	indexFinger: HandLandmark;
-	pinky: HandLandmark;
-	wrist: HandLandmark;
+// Add this interface near the top with other imports
+interface TimestampedPosition {
+	box: BoundingBox;
+	timestamp: number;
 }
 
 export default function RoomPage() {
@@ -61,10 +46,17 @@ export default function RoomPage() {
 	const remoteHandCanvasRef = useRef<HTMLCanvasElement>(null);
 
 	// State for the Mediapipe landmarker instances
-	const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(
+	const [localFaceLandmarker, setLocalFaceLandmarker] = useState<FaceLandmarker | null>(
 		null
 	);
-	const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(
+	const [localHandLandmarker, setLocalHandLandmarker] = useState<HandLandmarker | null>(
+		null
+	);
+
+	const [remoteFaceLandmarker, setRemoteFaceLandmarker] = useState<FaceLandmarker | null>(
+		null
+	);
+	const [remoteHandLandmarker, setRemoteHandLandmarker] = useState<HandLandmarker | null>(
 		null
 	);
 
@@ -82,6 +74,19 @@ export default function RoomPage() {
 
 	// Track if we have a remote stream
 	const [remoteStreamExists, setRemoteStreamExists] = useState(false);
+
+	// Change from useState to useRef
+	const localPreviousHandPositionRef = useRef<TimestampedPosition | null>(null);
+	const remotePreviousHandPositionRef = useRef<TimestampedPosition | null>(null);
+
+	// Keep the state for UI updates
+	const [handSpeed, setHandSpeed] = useState<number>(0);
+	const [handDirection, setHandDirection] = useState<number>(0);
+	const [isColliding, setIsColliding] = useState<boolean>(false);
+
+	const [remoteHandSpeed, setRemoteHandSpeed] = useState<number>(0);
+	const [remoteHandDirection, setRemoteHandDirection] = useState<number>(0);
+	const [isRemoteColliding, setIsRemoteColliding] = useState<boolean>(false);
 
 	// 1) Initialize Mediapipe tasks & canvas contexts
 	useEffect(() => {
@@ -115,8 +120,11 @@ export default function RoomPage() {
 				}
 			);
 
-			setFaceLandmarker(faceLandmarkerInstance);
-			setHandLandmarker(handLandmarkerInstance);
+			setLocalFaceLandmarker(faceLandmarkerInstance);
+			setLocalHandLandmarker(handLandmarkerInstance);
+
+			setRemoteFaceLandmarker(faceLandmarkerInstance);
+			setRemoteHandLandmarker(handLandmarkerInstance);
 
 			// Set canvas contexts
 			if (localFaceCanvasRef.current) {
@@ -155,98 +163,206 @@ export default function RoomPage() {
 	// 2) Per-frame detection
 	useEffect(() => {
 		let animationFrameId: number;
+		let lastProcessedTimestamp = 0;
 
 		const animate = async () => {
-			if (!faceLandmarker || !handLandmarker) {
+			if (!localFaceLandmarker || !localHandLandmarker) {
 				animationFrameId = requestAnimationFrame(animate);
 				return;
 			}
 
-			// --- Detect and draw for LOCAL video ---
-			if (
-				localVideoRef.current &&
-				!localVideoRef.current.paused &&
-				!localVideoRef.current.ended
-			) {
-				const video = localVideoRef.current;
-				const timestamp = performance.now();
+			const timestamp = performance.now();
 
-				const faceResults = faceLandmarker.detectForVideo(
-					video,
-					timestamp
-				) as DetectionResults;
-				const handResults = handLandmarker.detectForVideo(
-					video,
-					timestamp
-				) as HandDetectionResults;
-
-				// Draw face landmarks on localFaceCanvas
-				if (localFaceCtx && localFaceCanvasRef.current) {
-					const faceCanvas = localFaceCanvasRef.current;
-					localFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
-
-					if (faceResults?.faceLandmarks) {
-						faceResults.faceLandmarks.forEach((landmarks) => {
-							drawFaceBoundingBox(landmarks, localFaceCtx, localFaceCanvasRef.current, true);
-						});
-					}
-				}
-
-				// Draw hand landmarks on localHandCanvas
-				if (localHandCtx && localHandCanvasRef.current) {
-					const handCanvas = localHandCanvasRef.current;
-					localHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
-
-					if (handResults?.landmarks) {
-						handResults.landmarks.forEach((landmarks) => {
-							drawHandEdges(landmarks, localHandCtx, localHandCanvasRef.current, true);
-						});
-					}
-				}
+			 // Ensure minimum time between frames (16ms = ~60fps)
+			if (timestamp - lastProcessedTimestamp < 16) {
+				animationFrameId = requestAnimationFrame(animate);
+				return;
 			}
 
-			// --- Detect and draw for REMOTE video ---
-			if (
-				remoteStreamExists &&
-				remoteVideoRef.current &&
-				!remoteVideoRef.current.paused &&
-				!remoteVideoRef.current.ended
-			) {
-				const video = remoteVideoRef.current;
-				const timestamp = performance.now();
+			try {
+				// --- Detect and draw for LOCAL video ---
+				if (
+					localVideoRef.current &&
+					!localVideoRef.current.paused &&
+					!localVideoRef.current.ended
+				) {
+					const video = localVideoRef.current;
+					
+					// Round timestamp to nearest millisecond to avoid precision issues
+					const roundedTimestamp = Math.round(timestamp);
 
-				const faceResults = faceLandmarker.detectForVideo(
-					video,
-					timestamp
-				) as DetectionResults;
-				const handResults = handLandmarker.detectForVideo(
-					video,
-					timestamp
-				) as HandDetectionResults;
+					// Process face and hand detections sequentially
+					const faceResults = await localFaceLandmarker.detectForVideo(
+						video,
+						roundedTimestamp
+					) as DetectionResults;
 
-				// Draw face on remoteFaceCanvas
-				if (remoteFaceCtx && remoteFaceCanvasRef.current) {
-					const faceCanvas = remoteFaceCanvasRef.current;
-					remoteFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+					const handResults = await localHandLandmarker.detectForVideo(
+						video,
+						roundedTimestamp
+					) as HandDetectionResults;
 
-					if (faceResults?.faceLandmarks) {
-						faceResults.faceLandmarks.forEach((landmarks) => {
-							drawFaceBoundingBox(landmarks, remoteFaceCtx, remoteFaceCanvasRef.current, false);
-						});
+					// console.log(handResults);
+
+					// Process hand movements and collisions
+					if (handResults?.landmarks && handResults.landmarks.length > 0) {
+						// Only process the first hand (index 0)
+						const handLandmarks = handResults.landmarks[0];
+						const currentHandBox = convertHandLandmarksToBoundingBox(handLandmarks);
+						const currentPosition: TimestampedPosition = {
+							box: currentHandBox,
+							timestamp
+						};
+
+						// console.log(previousHandPositionRef.current);
+
+						const previous = localPreviousHandPositionRef.current;
+
+						if (previous && (timestamp - previous.timestamp) > 0) {
+							const velocity = calculateVelocity(
+								currentPosition.box,
+								previous.box,
+								timestamp - previous.timestamp
+							);
+							const direction = calculateDirection(currentPosition.box, previous.box);
+
+							// Scale velocity to make it more readable
+							setHandSpeed(velocity * 1000);
+							setHandDirection(direction);
+
+							// Process face collision
+							if (faceResults?.faceLandmarks?.[0]) {
+								const faceLandmarks = faceResults.faceLandmarks[0];
+								const faceBox = convertFaceLandmarksToBoundingBox(faceLandmarks);
+								const collision = checkCollision(currentPosition.box, faceBox);
+								setIsColliding(collision);
+
+								if (collision) {
+									socketRef.current?.emit('collision', {
+										roomId,
+										data: {
+											speed: velocity,
+											direction,
+											timestamp
+										}
+									});
+								}
+							}
+						}
+
+						// Update the ref with current position
+						localPreviousHandPositionRef.current = currentPosition;
+					}
+
+					// Draw face landmarks on localFaceCanvas
+					if (localFaceCtx && localFaceCanvasRef.current) {
+						const faceCanvas = localFaceCanvasRef.current;
+						localFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+
+						if (faceResults?.faceLandmarks) {
+							faceResults.faceLandmarks.forEach((landmarks) => {
+								drawFaceBoundingBox(landmarks, localFaceCtx, localFaceCanvasRef.current as HTMLCanvasElement, true);
+							});
+						}
+					}
+
+					// Draw hand landmarks on localHandCanvas
+					if (localHandCtx && localHandCanvasRef.current) {
+						const handCanvas = localHandCanvasRef.current;
+						localHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+
+						if (handResults?.landmarks) {
+							handResults.landmarks.forEach((landmarks) => {
+								drawHandEdges(landmarks, localHandCtx, localHandCanvasRef.current as HTMLCanvasElement, true);
+							});
+						}
 					}
 				}
 
-				// Draw hand on remoteHandCanvas
-				if (remoteHandCtx && remoteHandCanvasRef.current) {
-					const handCanvas = remoteHandCanvasRef.current;
-					remoteHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+				// --- Detect and draw for REMOTE video ---
+				if (
+					remoteStreamExists &&
+					remoteVideoRef.current &&
+					!remoteVideoRef.current.paused &&
+					!remoteVideoRef.current.ended
+				) {
+					const video = remoteVideoRef.current;
+					
+					// Use a slightly offset timestamp for remote processing
+					const remoteTimestamp = Math.round(timestamp) + 1;
 
-					if (handResults?.landmarks) {
-						handResults.landmarks.forEach((landmarks) => {
-							drawHandEdges(landmarks, remoteHandCtx, remoteHandCanvasRef.current, false);
-						});
+					// Process face and hand detections sequentially
+					const faceResults = await localFaceLandmarker.detectForVideo(
+						video,
+						remoteTimestamp
+					) as DetectionResults;
+
+					const handResults = await localHandLandmarker.detectForVideo(
+						video,
+						remoteTimestamp
+					) as HandDetectionResults;
+
+					// Draw face on remoteFaceCanvas
+					if (remoteFaceCtx && remoteFaceCanvasRef.current) {
+						const faceCanvas = remoteFaceCanvasRef.current;
+						remoteFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+
+						if (faceResults?.faceLandmarks) {
+							faceResults.faceLandmarks.forEach((landmarks) => {
+								drawFaceBoundingBox(landmarks, remoteFaceCtx, remoteFaceCanvasRef.current as HTMLCanvasElement, false);
+							});
+						}
+					}
+
+					// Draw hand on remoteHandCanvas
+					if (remoteHandCtx && remoteHandCanvasRef.current) {
+						const handCanvas = remoteHandCanvasRef.current;
+						remoteHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+
+						if (handResults?.landmarks) {
+							handResults.landmarks.forEach((landmarks) => {
+								drawHandEdges(landmarks, remoteHandCtx, remoteHandCanvasRef.current as HTMLCanvasElement, false);
+							});
+						}
+					}
+
+					if (handResults?.landmarks && handResults.landmarks.length > 0) {
+						const handLandmarks = handResults.landmarks[0];
+						const currentHandBox = convertHandLandmarksToBoundingBox(handLandmarks);
+						const currentPosition: TimestampedPosition = {
+							box: currentHandBox,
+							timestamp
+						};
+					
+						const previous = remotePreviousHandPositionRef.current;
+					
+						if (previous && (timestamp - previous.timestamp) > 0) {
+							const velocity = calculateVelocity(
+								currentPosition.box,
+								previous.box,
+								timestamp - previous.timestamp
+							);
+							const direction = calculateDirection(currentPosition.box, previous.box);
+					
+							setRemoteHandSpeed(velocity * 1000);
+							setRemoteHandDirection(direction);
+					
+							if (faceResults?.faceLandmarks?.[0]) {
+								const faceLandmarks = faceResults.faceLandmarks[0];
+								const faceBox = convertFaceLandmarksToBoundingBox(faceLandmarks);
+								const collision = checkCollision(currentPosition.box, faceBox);
+								setIsRemoteColliding(collision);
+							}
+						}
+					
+						remotePreviousHandPositionRef.current = currentPosition;
 					}
 				}
+
+				lastProcessedTimestamp = timestamp;
+			} catch (error) {
+				console.warn('Detection error:', error);
+				// Continue animation even if there's an error
 			}
 
 			animationFrameId = requestAnimationFrame(animate);
@@ -255,9 +371,11 @@ export default function RoomPage() {
 		animate();
 
 		return () => {
-			if (animationFrameId) cancelAnimationFrame(animationFrameId);
+			if (animationFrameId) {
+				cancelAnimationFrame(animationFrameId);
+			}
 		};
-	}, [faceLandmarker, handLandmarker, remoteStreamExists]);
+	}, [localFaceLandmarker, localHandLandmarker, remoteStreamExists]);
 
 	// 3) WebRTC + Socket.IO logic
 	useEffect(() => {
@@ -512,16 +630,16 @@ export default function RoomPage() {
 		// Draw palm base
 		ctx.beginPath();
 		ctx.moveTo(getX(handPoints.wrist.x), getY(handPoints.wrist.y));
-		[handPoints.thumb[0], handPoints.index[0], handPoints.middle[0], 
-		 handPoints.ring[0], handPoints.pinky[0]].forEach(point => {
+		[handPoints.thumb[0], handPoints.index[0], handPoints.middle[0],
+		handPoints.ring[0], handPoints.pinky[0]].forEach(point => {
 			ctx.lineTo(getX(point.x), getY(point.y));
 		});
 		ctx.closePath();
 		ctx.stroke();
 
 		// Draw fingers
-		[handPoints.thumb, handPoints.index, handPoints.middle, 
-		 handPoints.ring, handPoints.pinky].forEach(finger => {
+		[handPoints.thumb, handPoints.index, handPoints.middle,
+		handPoints.ring, handPoints.pinky].forEach(finger => {
 			drawFinger(finger);
 		});
 
@@ -594,6 +712,73 @@ export default function RoomPage() {
 					className="absolute top-0 left-0 w-full h-full rounded-lg pointer-events-none"
 					style={{ transform: "scaleX(1)" }}
 				/>
+			</div>
+
+			{/* Add this stats overlay */}
+			<div className="absolute top-4 left-4 bg-black/50 p-4 rounded-lg text-white font-mono">
+				<div className="grid grid-cols-2 gap-4">
+					{/* Local Stats */}
+					<div className="flex flex-col gap-2">
+						<h3 className="font-bold">Local</h3>
+						<div>
+							Speed: {handSpeed.toFixed(2)} units/ms
+							<div className="w-32 h-2 bg-gray-700 rounded">
+								<div
+									className="h-full bg-green-500 rounded transition-all"
+									style={{ width: `${Math.min(handSpeed * 100, 100)}%` }}
+								/>
+							</div>
+						</div>
+						<div>
+							Direction: {handDirection.toFixed(0)}°
+							<div className="relative w-8 h-8">
+								<div
+									className="absolute w-6 h-1 bg-blue-500 origin-left"
+									style={{
+										transform: `rotate(${handDirection}deg)`,
+										transformOrigin: 'center'
+									}}
+								/>
+							</div>
+						</div>
+						<div>
+							Collision: <span className={isColliding ? "text-red-500" : "text-green-500"}>
+								{isColliding ? "YES" : "NO"}
+							</span>
+						</div>
+					</div>
+
+					{/* Remote Stats */}
+					<div className="flex flex-col gap-2">
+						<h3 className="font-bold">Remote</h3>
+						<div>
+							Speed: {remoteHandSpeed.toFixed(2)} units/ms
+							<div className="w-32 h-2 bg-gray-700 rounded">
+								<div
+									className="h-full bg-green-500 rounded transition-all"
+									style={{ width: `${Math.min(remoteHandSpeed * 100, 100)}%` }}
+								/>
+							</div>
+						</div>
+						<div>
+							Direction: {remoteHandDirection.toFixed(0)}°
+							<div className="relative w-8 h-8">
+								<div
+									className="absolute w-6 h-1 bg-blue-500 origin-left"
+									style={{
+										transform: `rotate(${remoteHandDirection}deg)`,
+										transformOrigin: 'center'
+									}}
+								/>
+							</div>
+						</div>
+						<div>
+							Collision: <span className={isRemoteColliding ? "text-red-500" : "text-green-500"}>
+								{isRemoteColliding ? "YES" : "NO"}
+							</span>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	);

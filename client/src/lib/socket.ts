@@ -4,9 +4,7 @@
 "use client";
 
 import { io } from "socket.io-client";
-import { StreamData, HandData, VideoTrackData } from "../interfaces/stream.model";
-import { ItemData } from "../interfaces/attack.model";
-import { HealthData } from "../interfaces/stats.model";
+import { StreamData, VideoTrackData } from "../interfaces/stream.model";
 
 export const socket = io();
 
@@ -60,29 +58,29 @@ export const listenToGameState = (callback: (data: StreamData) => void) => {
 };
 
 // Optional: Helper function to create initial game state
-export const createInitialGameState = (): StreamData => ({
-  video: typeof window !== 'undefined' ? new MediaStream() : null as any,
-  handData: {
-    speed: 0,
-    position: { x: 0, y: 0 },
-    direction: "none",
-    powerup: false
-  },
-  itemData: {
-    scaling_function: (input: number) => input,
-    details: {
-      type: "none",
-      name: "none",
-      description: "none",
-      icon: "none"
-    }
-  },
-  healthData: {
-    max_health: 100,
-    current_health: 100,
-    change: 0
-  }
-});
+// export const createInitialGameState = (): StreamData => ({
+//   video: typeof window !== 'undefined' ? new MediaStream() : null as any,
+//   handData: {
+//     speed: 0,
+//     position: { x: 0, y: 0 },
+//     direction: 0,
+//     powerup: false
+//   },
+//   itemData: {
+//     scaling_function: (input: number) => input,
+//     details: {
+//       type: "none",
+//       name: "none",
+//       description: "none",
+//       icon: "none"
+//     }
+//   },
+//   healthData: {
+//     max_health: 100,
+//     current_health: 100,
+//     change: 0
+//   }
+// });
 
 
 
