@@ -1,30 +1,61 @@
 // components/StatsOverlay.tsx
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { calculateDamage } from '@/lib/logic';
+import { HealthScoreIcon } from './healthScore';
 
 interface StatsOverlayProps {
   handSpeed: number;
-  handDirection: number;
   isColliding: boolean;
   remoteHandSpeed: number;
-  remoteHandDirection: number;
   isRemoteColliding: boolean;
 }
 
 export default function StatsOverlay({
   handSpeed,
-  handDirection,
   isColliding,
   remoteHandSpeed,
-  remoteHandDirection,
   isRemoteColliding,
 }: StatsOverlayProps) {
+
+  const [localLastInflictedDamage, setLocalLastInflictedDamage] = useState<number>(0);
+  const [remoteLastInflictedDamage, setRemoteLastInflictedDamage] = useState<number>(0);
+
+  // -------------- Health States --------------
+  const [localHealth, setLocalHealth] = useState<number>(100);
+  const [remoteHealth, setRemoteHealth] = useState<number>(100);
+
+  const prevLocalCollision = useRef(false);
+  const prevRemoteCollision = useRef(false);
+
+  useEffect(() => {
+    if (isColliding && !prevLocalCollision.current) {
+      const damage = calculateDamage(handSpeed);
+      setRemoteLastInflictedDamage(damage.damage);
+      setRemoteHealth(prev => Math.max(0, prev - damage.damage));
+    }
+    prevLocalCollision.current = isColliding;
+  }, [isColliding, handSpeed]);
+
+  useEffect(() => {
+    if (isRemoteColliding && !prevRemoteCollision.current) {
+      const damage = calculateDamage(remoteHandSpeed);
+      setLocalLastInflictedDamage(damage.damage);
+      setLocalHealth(prev => Math.max(0, prev - damage.damage));
+    }
+    prevRemoteCollision.current = isRemoteColliding;
+  }, [isRemoteColliding, remoteHandSpeed]);
+
   return (
-    <div className="absolute top-4 left-4 bg-black/50 p-4 rounded-lg text-white font-mono">
+    <div className="bg-black/50 p-4 rounded-lg text-white font-mono">
       <div className="grid grid-cols-2 gap-4">
+
         {/* Local Stats */}
         <div className="flex flex-col gap-2">
           <h3 className="font-bold">Local</h3>
+          <div className='w-full'>
+            <HealthScoreIcon score={Math.floor(localHealth / 10)} color="blue" />
+          </div>
           <div>
             Speed: {handSpeed.toFixed(2)} units/ms
             <div className="w-32 h-2 bg-gray-700 rounded">
@@ -34,18 +65,7 @@ export default function StatsOverlay({
               />
             </div>
           </div>
-          <div>
-            Direction: {handDirection.toFixed(0)}°
-            <div className="relative w-8 h-8">
-              <div
-                className="absolute w-6 h-1 bg-blue-500 origin-left"
-                style={{
-                  transform: `rotate(${handDirection}deg)`,
-                  transformOrigin: 'center',
-                }}
-              />
-            </div>
-          </div>
+          <div>Last Damage Taken: {localLastInflictedDamage.toFixed(1)}</div>
           <div>
             Collision:{' '}
             <span className={isColliding ? 'text-red-500' : 'text-green-500'}>
@@ -55,8 +75,9 @@ export default function StatsOverlay({
         </div>
 
         {/* Remote Stats */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 w-full items-end">
           <h3 className="font-bold">Remote</h3>
+          <HealthScoreIcon score={Math.floor(remoteHealth / 10)} color="red" />
           <div>
             Speed: {remoteHandSpeed.toFixed(2)} units/ms
             <div className="w-32 h-2 bg-gray-700 rounded">
@@ -66,18 +87,7 @@ export default function StatsOverlay({
               />
             </div>
           </div>
-          <div>
-            Direction: {remoteHandDirection.toFixed(0)}°
-            <div className="relative w-8 h-8">
-              <div
-                className="absolute w-6 h-1 bg-blue-500 origin-left"
-                style={{
-                  transform: `rotate(${remoteHandDirection}deg)`,
-                  transformOrigin: 'center',
-                }}
-              />
-            </div>
-          </div>
+          <div>Last Damage Taken: {remoteLastInflictedDamage.toFixed(1)}</div>
           <div>
             Collision:{' '}
             <span
@@ -87,6 +97,7 @@ export default function StatsOverlay({
             </span>
           </div>
         </div>
+
       </div>
     </div>
   );

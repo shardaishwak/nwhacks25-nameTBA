@@ -26,11 +26,11 @@ export default function CallPage() {
 
   // -------------- Collision & Speed States --------------
   const [handSpeed, setHandSpeed] = useState<number>(0);
-  const [handDirection, setHandDirection] = useState<number>(0);
+  // const [handDirection, setHandDirection] = useState<number>(0);
   const [isColliding, setIsColliding] = useState<boolean>(false);
 
   const [remoteHandSpeed, setRemoteHandSpeed] = useState<number>(0);
-  const [remoteHandDirection, setRemoteHandDirection] = useState<number>(0);
+  // const [remoteHandDirection, setRemoteHandDirection] = useState<number>(0);
   const [isRemoteColliding, setIsRemoteColliding] = useState<boolean>(false);
 
   // -------------- Hooks: Socket + WebRTC --------------
@@ -58,22 +58,13 @@ export default function CallPage() {
     isRemoteColliding,
     setIsRemoteColliding,
     setHandSpeed,
-    setHandDirection,
     setRemoteHandSpeed,
-    setRemoteHandDirection,
   });
 
   return (
-    <div className="relative w-full h-screen bg-gray-800">
-      <div className="grid grid-cols-2 gap-4 p-4">
-        {/* LOCAL side */}
-        <LocalVideoSection
-          localVideoRef={localVideoRef}
-          localFaceCanvasRef={localFaceCanvasRef}
-          remoteHandCanvasRef={remoteHandCanvasRef}
-        />
-
-        {/* REMOTE side */}
+    <div className="w-full h-screen bg-gray-800 relative">
+      {/* Main remote video container */}
+      <div className="w-full h-full">
         <RemoteVideoSection
           remoteVideoRef={remoteVideoRef}
           remoteStreamExists={remoteStreamExists}
@@ -82,15 +73,25 @@ export default function CallPage() {
         />
       </div>
 
-      {/* Stats HUD */}
-      <StatsOverlay
-        handSpeed={handSpeed}
-        handDirection={handDirection}
-        isColliding={isColliding}
-        remoteHandSpeed={remoteHandSpeed}
-        remoteHandDirection={remoteHandDirection}
-        isRemoteColliding={isRemoteColliding}
-      />
+      {/* Floating local video container */}
+      <div className="absolute top-4 right-4 w-72 aspect-video rounded-lg overflow-hidden shadow-lg">
+        <LocalVideoSection
+          localVideoRef={localVideoRef}
+          localFaceCanvasRef={localFaceCanvasRef}
+          remoteHandCanvasRef={remoteHandCanvasRef}
+        />
+      </div>
+
+      {/* Bottom stats overlay */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full">
+        <StatsOverlay
+          handSpeed={handSpeed}
+          isColliding={isColliding}
+          remoteHandSpeed={remoteHandSpeed}
+          isRemoteColliding={isRemoteColliding}
+          
+        />
+      </div>
     </div>
   );
 }

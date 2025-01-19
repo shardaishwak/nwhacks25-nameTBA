@@ -1,12 +1,15 @@
-import { HandData, FaceData, HandLandmark, FaceLandmark, Point, BoundingBox } from '../interfaces/hand.model';
+import { DamageData } from '@/interfaces/stats.model';
+import { HandData, FaceData, HandLandmark, FaceLandmark, Point, BoundingBox, } from '../interfaces/hand.model';
+import { Powerup } from '@/interfaces/attack.model';
 
 export function convertHandLandmarksToBoundingBox(landmarks: HandLandmark[]): HandData['boundingBox'] {
     let minX = Infinity, minY = Infinity;
     let maxX = -Infinity, maxY = -Infinity;
-    let top: HandLandmark = landmarks[0], 
-        bottom: HandLandmark = landmarks[0], 
-        left: HandLandmark = landmarks[0], 
+    let top: HandLandmark = landmarks[0],
+        bottom: HandLandmark = landmarks[0],
+        left: HandLandmark = landmarks[0],
         right: HandLandmark = landmarks[0];
+    let zIndexTotal = 0;
 
     landmarks.forEach(landmark => {
         if (landmark.x < minX) {
@@ -25,11 +28,13 @@ export function convertHandLandmarksToBoundingBox(landmarks: HandLandmark[]): Ha
             maxY = landmark.y;
             bottom = landmark;
         }
+        zIndexTotal += landmark.z;
     });
 
     return {
         topLeft: { x: left.x, y: top.y },
-        bottomRight: { x: right.x, y: bottom.y }
+        bottomRight: { x: right.x, y: bottom.y },
+        z: zIndexTotal / landmarks.length
     };
 }
 
@@ -66,27 +71,16 @@ export function calculateVelocity(
 
     const currentCenter = getBoundingBoxCenter(currentBox);
     const previousCenter = getBoundingBoxCenter(previousBox);
-    
+
     const dx = currentCenter.x - previousCenter.x;
     const dy = currentCenter.y - previousCenter.y;
-    
-    // Calculate distance between centers
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-//     // Calculate size change (expansion/contraction)
-//     const currentWidth = currentBox.bottomRight.x - currentBox.topLeft.x;
-//     const currentHeight = currentBox.bottomRight.y - currentBox.topLeft.y;
-//     const previousWidth = previousBox.bottomRight.x - previousBox.topLeft.x;
-//     const previousHeight = previousBox.bottomRight.y - previousBox.topLeft.y;
-    
-//     const sizeChange = Math.abs(
-//         (currentWidth * currentHeight) - (previousWidth * previousHeight)
-//     );
-    
-    // Combine linear movement and size change for final velocity
-    const totalChange = distance; // Adjust weight of size change
-    
-    const velocity = totalChange / timeElapsed; // units per millisecond
+    const dz = (currentBox.z ?? 0) - (previousBox.z ?? 0); // Handle optional z values
+
+    // Calculate distance between centers including z-axis
+    const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+    // Combine linear movement for final velocity
+    const velocity = distance / timeElapsed; // units per millisecond
 
     return velocity;
 }
@@ -97,13 +91,13 @@ export function calculateDirection(
 ): number {
     const currentCenter = getBoundingBoxCenter(currentBox);
     const previousCenter = getBoundingBoxCenter(previousBox);
-    
+
     const dx = currentCenter.x - previousCenter.x;
     const dy = currentCenter.y - previousCenter.y;
-    
+
     // Calculate angle in degrees (-180 to +180)
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    
+
     return angle;
 }
 
@@ -112,7 +106,7 @@ export function checkCollision(box1: BoundingBox, box2: BoundingBox, shouldMirro
     // When checking collisions between local and remote elements, we need to mirror one of them
     const x1 = shouldMirror ? 1 - box1.bottomRight.x : box1.topLeft.x;
     const x2 = shouldMirror ? 1 - box1.topLeft.x : box1.bottomRight.x;
-    
+
     return (
         x1 < box2.bottomRight.x &&
         x2 > box2.topLeft.x &&
@@ -121,3 +115,69 @@ export function checkCollision(box1: BoundingBox, box2: BoundingBox, shouldMirro
     );
 }
 
+// Helper function to check if a point is inside a polygon formed by landmarks
+function isPointInPolygon(point: Point, landmarks: (HandLandmark | FaceLandmark)[]): boolean {
+    let inside = false;
+    for (let i = 0, j = landmarks.length - 1; i < landmarks.length; j = i++) {
+        const xi = landmarks[i].x, yi = landmarks[i].y;
+        const xj = landmarks[j].x, yj = landmarks[j].y;
+        
+        const intersect = ((yi > point.y) !== (yj > point.y))
+            && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+// Function to check collision between hand and face using landmarks
+export function checkLandmarkCollision(
+    handLandmarks: HandLandmark[],
+    faceLandmarks: FaceLandmark[],
+    shouldMirror: boolean = false
+): boolean {
+    // Check if any hand landmark is inside the face polygon
+    for (const handLandmark of handLandmarks) {
+        const point = {
+            x: shouldMirror ? 1 - handLandmark.x : handLandmark.x,
+            y: handLandmark.y
+        };
+        if (isPointInPolygon(point, faceLandmarks)) {
+            return true;
+        }
+    }
+
+    // Check if any face landmark is inside the hand polygon
+    for (const faceLandmark of faceLandmarks) {
+        const point = {
+            x: shouldMirror ? 1 - faceLandmark.x : faceLandmark.x,
+            y: faceLandmark.y
+        };
+        if (isPointInPolygon(point, handLandmarks)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export function calculateDamage(velocity: number, powerups: Powerup[] = []): DamageData {
+
+    const velocityScaler = 10; // Arbitrary scaling factor
+
+    const isCritical = Math.random() < 0.1; // 10% chance of critical hit
+    const baseDamage = velocity * velocityScaler * (isCritical ? 2 : 1); // Double damage on critical hit
+    let finalDamage = baseDamage;
+
+    if (powerups.length > 0) {
+        finalDamage = powerups.reduce((damage: number, powerup) => {
+            return powerup.scaling_function(damage);
+        }, baseDamage);
+    }
+
+    return {
+        damage: finalDamage,
+        isCritical,
+        velocity,
+        powerups
+    };
+}

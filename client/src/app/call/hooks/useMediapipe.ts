@@ -20,11 +20,10 @@ import {
 	convertFaceLandmarksToBoundingBox,
 	convertHandLandmarksToBoundingBox,
 	calculateVelocity,
-	calculateDirection,
 	checkCollision,
-} from "@/lib/logic";
-import { drawHandEdges } from "@/utils/draw";
-import { drawFaceBoundingBox } from "@/utils/draw";
+} from '@/lib/logic';
+import { drawHandEdges } from '@/utils/draw';
+import { drawFaceBoundingBox } from '@/utils/draw';
 
 /** Used to track the bounding box + timestamp for velocity calculations. */
 interface TimestampedPosition {
@@ -58,9 +57,9 @@ interface UseMediapipeProps {
 
 	// Movement states
 	setHandSpeed: (value: number) => void;
-	setHandDirection: (value: number) => void;
+	// setHandDirection: (value: number) => void;
 	setRemoteHandSpeed: (value: number) => void;
-	setRemoteHandDirection: (value: number) => void;
+	// setRemoteHandDirection: (value: number) => void;
 }
 
 /**
@@ -82,9 +81,9 @@ export default function useMediapipe({
 	isRemoteColliding,
 	setIsRemoteColliding,
 	setHandSpeed,
-	setHandDirection,
+	// setHandDirection,
 	setRemoteHandSpeed,
-	setRemoteHandDirection,
+	// setRemoteHandDirection,
 }: UseMediapipeProps) {
 	// Add states for landmarkers and contexts
 	const [localFaceLandmarker, setLocalFaceLandmarker] =
@@ -414,16 +413,10 @@ export default function useMediapipe({
 
 						const prev = localPreviousHandPositionRef.current;
 						if (prev && timestamp - prev.timestamp > 0) {
-							const velocity = calculateVelocity(
-								currentHandBox,
-								prev.box,
-								timestamp - prev.timestamp
-							);
-							const direction = calculateDirection(currentHandBox, prev.box);
+							const velocity = calculateVelocity(currentHandBox, prev.box, timestamp - prev.timestamp);
 
-							// Speed & direction
+							// Speed
 							setHandSpeed(velocity * 1000);
-							setHandDirection(direction);
 
 							// Check collision with remote face
 							if (remoteFaceBoundingBox) {
@@ -436,11 +429,10 @@ export default function useMediapipe({
 
 								// Emit collision event
 								if (collision && socketRef.current) {
-									socketRef.current.emit("collision", {
+									socketRef.current.emit('collision', {
 										roomId,
 										data: {
 											speed: velocity,
-											direction,
 											timestamp,
 										},
 									});
@@ -521,10 +513,8 @@ export default function useMediapipe({
 								prev.box,
 								timestamp - prev.timestamp
 							);
-							const direction = calculateDirection(currentHandBox, prev.box);
 
 							setRemoteHandSpeed(velocity * 1000);
-							setRemoteHandDirection(direction);
 
 							// Check collision with local face bounding box
 							if (localFaceBoundingBox) {
@@ -576,37 +566,7 @@ export default function useMediapipe({
 		return () => {
 			if (animationFrameId) cancelAnimationFrame(animationFrameId);
 		};
-	}, [
-		roomId,
-		socketRef,
-		localVideoRef,
-		remoteVideoRef,
-		remoteFaceLandmarker,
-		remoteHandLandmarker,
-		localFaceLandmarker,
-		localHandLandmarker,
-		remoteStreamExists,
-		localFaceCtx,
-		localHandCtx,
-		remoteFaceCtx,
-		remoteHandCtx,
-		localFaceBoundingBox,
-		remoteFaceBoundingBox,
-		localPreviousHandPositionRef,
-		remotePreviousHandPositionRef,
-		setRemoteFaceBoundingBox,
-		setLocalFaceBoundingBox,
-		setHandSpeed,
-		setHandDirection,
-		setIsColliding,
-		setRemoteHandSpeed,
-		setRemoteHandDirection,
-		setIsRemoteColliding,
-		localFaceCanvasRef,
-		localHandCanvasRef,
-		remoteFaceCanvasRef,
-		remoteHandCanvasRef,
-	]);
+	}, [roomId, socketRef, localVideoRef, remoteVideoRef, remoteFaceLandmarker, remoteHandLandmarker, localFaceLandmarker, localHandLandmarker, remoteStreamExists, localFaceCtx, localHandCtx, remoteFaceCtx, remoteHandCtx, localFaceBoundingBox, remoteFaceBoundingBox, localPreviousHandPositionRef, remotePreviousHandPositionRef, setRemoteFaceBoundingBox, setLocalFaceBoundingBox, setHandSpeed, setIsColliding, setRemoteHandSpeed, setIsRemoteColliding, localFaceCanvasRef, localHandCanvasRef, remoteFaceCanvasRef, remoteHandCanvasRef]);
 
 	// -----------------------------------------
 	// 3) Play sound effect on collisions

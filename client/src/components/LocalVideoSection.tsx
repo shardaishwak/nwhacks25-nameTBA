@@ -14,7 +14,7 @@ export default function LocalVideoSection({
   remoteHandCanvasRef,
 }: LocalVideoSectionProps) {
   return (
-    <div className="relative w-[640px] h-[480px]">
+    <div className="relative">
       {/* Local video (mirrored) */}
       <video
         ref={localVideoRef}

@@ -57,10 +57,11 @@ export function HealthScoreIcon({
 	score,
 	color,
 }: {
-	score: keyof typeof HealthScoreBlue;
+	score: number;
 	color: "blue" | "red";
 }) {
+	const normalisedScore = Math.min(10, Math.max(0, score)) as keyof HealthScore;
 	const HealthScore = color === "blue" ? HealthScoreBlue : HealthScoreRed;
-	const Component = HealthScore[score];
+	const Component = HealthScore[normalisedScore];
 	return <Component />;
 }
