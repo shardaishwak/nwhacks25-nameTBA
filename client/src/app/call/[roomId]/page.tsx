@@ -42,10 +42,18 @@ export default function RoomPage() {
 	const remoteHandCanvasRef = useRef<HTMLCanvasElement>(null);
 
 	// State for the Mediapipe landmarker instances
-	const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(
+	const [localFaceLandmarker, setLocalFaceLandmarker] = useState<FaceLandmarker | null>(
 		null
 	);
-	const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(
+	const [localHandLandmarker, setLocalHandLandmarker] = useState<HandLandmarker | null>(
+		null
+	);
+
+	// State for the Mediapipe landmarker instances
+	const [remoteFaceLandmarker, setRemoteFaceLandmarker] = useState<FaceLandmarker | null>(
+		null
+	);
+	const [remoteHandLandmarker, setRemoteHandLandmarker] = useState<HandLandmarker | null>(
 		null
 	);
 
@@ -65,11 +73,17 @@ export default function RoomPage() {
 	const [remoteStreamExists, setRemoteStreamExists] = useState(false);
 
 	// Change from useState to useRef
-	const previousHandPositionRef = useRef<TimestampedPosition | null>(null);
+	const localPreviousHandPositionRef = useRef<TimestampedPosition | null>(null);
+	const remotePreviousHandPositionRef = useRef<TimestampedPosition | null>(null);
+
 	// Keep the state for UI updates
 	const [handSpeed, setHandSpeed] = useState<number>(0);
 	const [handDirection, setHandDirection] = useState<number>(0);
 	const [isColliding, setIsColliding] = useState<boolean>(false);
+
+	const [remoteHandSpeed, setRemoteHandSpeed] = useState<number>(0);
+	const [remoteHandDirection, setRemoteHandDirection] = useState<number>(0);
+	const [isRemoteColliding, setIsRemoteColliding] = useState<boolean>(false);
 
 	// 1) Initialize Mediapipe tasks & canvas contexts
 	useEffect(() => {
@@ -103,8 +117,8 @@ export default function RoomPage() {
 				}
 			);
 
-			setFaceLandmarker(faceLandmarkerInstance);
-			setHandLandmarker(handLandmarkerInstance);
+			setLocalFaceLandmarker(faceLandmarkerInstance);
+			setLocalHandLandmarker(handLandmarkerInstance);
 
 			// Set canvas contexts
 			if (localFaceCanvasRef.current) {
@@ -146,7 +160,7 @@ export default function RoomPage() {
 		let lastProcessedTimestamp = 0;
 
 		const animate = async () => {
-			if (!faceLandmarker || !handLandmarker) {
+			if (!localFaceLandmarker || !localHandLandmarker) {
 				animationFrameId = requestAnimationFrame(animate);
 				return;
 			}
@@ -167,11 +181,11 @@ export default function RoomPage() {
 			) {
 				const video = localVideoRef.current;
 
-				const faceResults = faceLandmarker.detectForVideo(
+				const faceResults = localFaceLandmarker.detectForVideo(
 					video,
 					timestamp
 				) as DetectionResults;
-				const handResults = handLandmarker.detectForVideo(
+				const handResults = localHandLandmarker.detectForVideo(
 					video,
 					timestamp
 				) as HandDetectionResults;
@@ -190,7 +204,7 @@ export default function RoomPage() {
 
 					// console.log(previousHandPositionRef.current);
 
-					const previous = previousHandPositionRef.current;
+					const previous = localPreviousHandPositionRef.current;
 
 					if (previous && (timestamp - previous.timestamp) > 0) {
 						const velocity = calculateVelocity(
@@ -225,7 +239,7 @@ export default function RoomPage() {
 					}
 
 					// Update the ref with current position
-					previousHandPositionRef.current = currentPosition;
+					localPreviousHandPositionRef.current = currentPosition;
 				}
 
 				// Draw face landmarks on localFaceCanvas
@@ -262,11 +276,11 @@ export default function RoomPage() {
 			) {
 				const video = remoteVideoRef.current;
 
-				const faceResults = faceLandmarker.detectForVideo(
+				const faceResults = localFaceLandmarker.detectForVideo(
 					video,
 					timestamp
 				) as DetectionResults;
-				const handResults = handLandmarker.detectForVideo(
+				const handResults = localHandLandmarker.detectForVideo(
 					video,
 					timestamp
 				) as HandDetectionResults;
@@ -294,6 +308,38 @@ export default function RoomPage() {
 						});
 					}
 				}
+
+				if (handResults?.landmarks && handResults.landmarks.length > 0) {
+					const handLandmarks = handResults.landmarks[0];
+					const currentHandBox = convertHandLandmarksToBoundingBox(handLandmarks);
+					const currentPosition: TimestampedPosition = {
+						box: currentHandBox,
+						timestamp
+					};
+				
+					const previous = remotePreviousHandPositionRef.current;
+				
+					if (previous && (timestamp - previous.timestamp) > 0) {
+						const velocity = calculateVelocity(
+							currentPosition.box,
+							previous.box,
+							timestamp - previous.timestamp
+						);
+						const direction = calculateDirection(currentPosition.box, previous.box);
+				
+						setRemoteHandSpeed(velocity * 1000);
+						setRemoteHandDirection(direction);
+				
+						if (faceResults?.faceLandmarks?.[0]) {
+							const faceLandmarks = faceResults.faceLandmarks[0];
+							const faceBox = convertFaceLandmarksToBoundingBox(faceLandmarks);
+							const collision = checkCollision(currentPosition.box, faceBox);
+							setIsRemoteColliding(collision);
+						}
+					}
+				
+					remotePreviousHandPositionRef.current = currentPosition;
+				}
 			}
 
 			lastProcessedTimestamp = timestamp;
@@ -307,7 +353,7 @@ export default function RoomPage() {
 				cancelAnimationFrame(animationFrameId);
 			}
 		};
-	}, [faceLandmarker, handLandmarker, remoteStreamExists]);
+	}, [localFaceLandmarker, localHandLandmarker, remoteStreamExists]);
 
 	// 3) WebRTC + Socket.IO logic
 	useEffect(() => {
@@ -648,32 +694,67 @@ export default function RoomPage() {
 
 			{/* Add this stats overlay */}
 			<div className="absolute top-4 left-4 bg-black/50 p-4 rounded-lg text-white font-mono">
-				<div className="flex flex-col gap-2">
-					<div>
-						Speed: {handSpeed.toFixed(2)} units/ms
-						<div className="w-32 h-2 bg-gray-700 rounded">
-							<div
-								className="h-full bg-green-500 rounded transition-all"
-								style={{ width: `${Math.min(handSpeed * 100, 100)}%` }}
-							/>
+				<div className="grid grid-cols-2 gap-4">
+					{/* Local Stats */}
+					<div className="flex flex-col gap-2">
+						<h3 className="font-bold">Local</h3>
+						<div>
+							Speed: {handSpeed.toFixed(2)} units/ms
+							<div className="w-32 h-2 bg-gray-700 rounded">
+								<div
+									className="h-full bg-green-500 rounded transition-all"
+									style={{ width: `${Math.min(handSpeed * 100, 100)}%` }}
+								/>
+							</div>
+						</div>
+						<div>
+							Direction: {handDirection.toFixed(0)}°
+							<div className="relative w-8 h-8">
+								<div
+									className="absolute w-6 h-1 bg-blue-500 origin-left"
+									style={{
+										transform: `rotate(${handDirection}deg)`,
+										transformOrigin: 'center'
+									}}
+								/>
+							</div>
+						</div>
+						<div>
+							Collision: <span className={isColliding ? "text-red-500" : "text-green-500"}>
+								{isColliding ? "YES" : "NO"}
+							</span>
 						</div>
 					</div>
-					<div>
-						Direction: {handDirection.toFixed(0)}°
-						<div className="relative w-8 h-8">
-							<div
-								className="absolute w-6 h-1 bg-blue-500 origin-left"
-								style={{
-									transform: `rotate(${handDirection}deg)`,
-									transformOrigin: 'center'
-								}}
-							/>
+
+					{/* Remote Stats */}
+					<div className="flex flex-col gap-2">
+						<h3 className="font-bold">Remote</h3>
+						<div>
+							Speed: {remoteHandSpeed.toFixed(2)} units/ms
+							<div className="w-32 h-2 bg-gray-700 rounded">
+								<div
+									className="h-full bg-green-500 rounded transition-all"
+									style={{ width: `${Math.min(remoteHandSpeed * 100, 100)}%` }}
+								/>
+							</div>
 						</div>
-					</div>
-					<div>
-						Collision: <span className={isColliding ? "text-red-500" : "text-green-500"}>
-							{isColliding ? "YES" : "NO"}
-						</span>
+						<div>
+							Direction: {remoteHandDirection.toFixed(0)}°
+							<div className="relative w-8 h-8">
+								<div
+									className="absolute w-6 h-1 bg-blue-500 origin-left"
+									style={{
+										transform: `rotate(${remoteHandDirection}deg)`,
+										transformOrigin: 'center'
+									}}
+								/>
+							</div>
+						</div>
+						<div>
+							Collision: <span className={isRemoteColliding ? "text-red-500" : "text-green-500"}>
+								{isRemoteColliding ? "YES" : "NO"}
+							</span>
+						</div>
 					</div>
 				</div>
 			</div>
