@@ -1,0 +1,452 @@
+{
+	"contracts": {
+		"bet": {
+			"id": "bet",
+			"name": "Bet Contract",
+			"address": "",
+			"abi": [
+				{
+					"inputs": [
+						{
+							"internalType": "address",
+							"name": "initialOwner",
+							"type": "address"
+						},
+						{
+							"internalType": "address payable",
+							"name": "player1",
+							"type": "address"
+						},
+						{
+							"internalType": "address payable",
+							"name": "player2",
+							"type": "address"
+						},
+						{
+							"internalType": "uint256",
+							"name": "amount",
+							"type": "uint256"
+						},
+						{
+							"internalType": "bool",
+							"name": "resolved",
+							"type": "bool"
+						}
+					],
+					"stateMutability": "nonpayable",
+					"type": "constructor"
+				},
+				{
+					"inputs": [],
+					"name": "AlreadyPaid",
+					"type": "error"
+				},
+				{
+					"inputs": [],
+					"name": "BetAlreadyResolved",
+					"type": "error"
+				},
+				{
+					"inputs": [],
+					"name": "BetNotPaid",
+					"type": "error"
+				},
+				{
+					"inputs": [],
+					"name": "BetNotResolved",
+					"type": "error"
+				},
+				{
+					"inputs": [],
+					"name": "InvalidAmount",
+					"type": "error"
+				},
+				{
+					"inputs": [],
+					"name": "InvalidUser",
+					"type": "error"
+				},
+				{
+					"inputs": [
+						{
+							"internalType": "address",
+							"name": "owner",
+							"type": "address"
+						}
+					],
+					"name": "OwnableInvalidOwner",
+					"type": "error"
+				},
+				{
+					"inputs": [
+						{
+							"internalType": "address",
+							"name": "account",
+							"type": "address"
+						}
+					],
+					"name": "OwnableUnauthorizedAccount",
+					"type": "error"
+				},
+				{
+					"anonymous": false,
+					"inputs": [
+						{
+							"indexed": true,
+							"internalType": "address",
+							"name": "previousOwner",
+							"type": "address"
+						},
+						{
+							"indexed": true,
+							"internalType": "address",
+							"name": "newOwner",
+							"type": "address"
+						}
+					],
+					"name": "OwnershipTransferred",
+					"type": "event"
+				},
+				{
+					"inputs": [],
+					"name": "betDetails",
+					"outputs": [
+						{
+							"internalType": "address payable",
+							"name": "player1",
+							"type": "address"
+						},
+						{
+							"internalType": "address payable",
+							"name": "player2",
+							"type": "address"
+						},
+						{
+							"internalType": "uint256",
+							"name": "amount",
+							"type": "uint256"
+						},
+						{
+							"internalType": "bool",
+							"name": "resolved",
+							"type": "bool"
+						},
+						{
+							"internalType": "bool",
+							"name": "started",
+							"type": "bool"
+						},
+						{
+							"internalType": "uint256",
+							"name": "startTime",
+							"type": "uint256"
+						},
+						{
+							"internalType": "bool",
+							"name": "player1Paid",
+							"type": "bool"
+						},
+						{
+							"internalType": "bool",
+							"name": "player2Paid",
+							"type": "bool"
+						}
+					],
+					"stateMutability": "view",
+					"type": "function"
+				},
+				{
+					"inputs": [],
+					"name": "fund",
+					"outputs": [],
+					"stateMutability": "payable",
+					"type": "function"
+				},
+				{
+					"inputs": [],
+					"name": "getBetDetails",
+					"outputs": [
+						{
+							"components": [
+								{
+									"internalType": "address payable",
+									"name": "player1",
+									"type": "address"
+								},
+								{
+									"internalType": "address payable",
+									"name": "player2",
+									"type": "address"
+								},
+								{
+									"internalType": "uint256",
+									"name": "amount",
+									"type": "uint256"
+								},
+								{
+									"internalType": "bool",
+									"name": "resolved",
+									"type": "bool"
+								},
+								{
+									"internalType": "bool",
+									"name": "started",
+									"type": "bool"
+								},
+								{
+									"internalType": "uint256",
+									"name": "startTime",
+									"type": "uint256"
+								},
+								{
+									"internalType": "bool",
+									"name": "player1Paid",
+									"type": "bool"
+								},
+								{
+									"internalType": "bool",
+									"name": "player2Paid",
+									"type": "bool"
+								}
+							],
+							"internalType": "struct Bet.BetDetails",
+							"name": "",
+							"type": "tuple"
+						}
+					],
+					"stateMutability": "view",
+					"type": "function"
+				},
+				{
+					"inputs": [],
+					"name": "owner",
+					"outputs": [
+						{
+							"internalType": "address",
+							"name": "",
+							"type": "address"
+						}
+					],
+					"stateMutability": "view",
+					"type": "function"
+				},
+				{
+					"inputs": [],
+					"name": "renounceOwnership",
+					"outputs": [],
+					"stateMutability": "nonpayable",
+					"type": "function"
+				},
+				{
+					"inputs": [
+						{
+							"internalType": "uint256",
+							"name": "health1",
+							"type": "uint256"
+						},
+						{
+							"internalType": "uint256",
+							"name": "health2",
+							"type": "uint256"
+						}
+					],
+					"name": "resolveBet",
+					"outputs": [],
+					"stateMutability": "nonpayable",
+					"type": "function"
+				},
+				{
+					"inputs": [],
+					"name": "startBet",
+					"outputs": [],
+					"stateMutability": "nonpayable",
+					"type": "function"
+				},
+				{
+					"inputs": [
+						{
+							"internalType": "address",
+							"name": "newOwner",
+							"type": "address"
+						}
+					],
+					"name": "transferOwnership",
+					"outputs": [],
+					"stateMutability": "nonpayable",
+					"type": "function"
+				}
+			]
+		},
+		"betfactory": {
+			"id": "betfactory",
+			"name": "Bet Factory Contract",
+			"address": "",
+			"abi": [
+				{
+					"inputs": [
+						{
+							"internalType": "address",
+							"name": "initialOwner",
+							"type": "address"
+						}
+					],
+					"stateMutability": "nonpayable",
+					"type": "constructor"
+				},
+				{
+					"inputs": [
+						{
+							"internalType": "address",
+							"name": "owner",
+							"type": "address"
+						}
+					],
+					"name": "OwnableInvalidOwner",
+					"type": "error"
+				},
+				{
+					"inputs": [
+						{
+							"internalType": "address",
+							"name": "account",
+							"type": "address"
+						}
+					],
+					"name": "OwnableUnauthorizedAccount",
+					"type": "error"
+				},
+				{
+					"anonymous": false,
+					"inputs": [
+						{
+							"indexed": true,
+							"internalType": "address",
+							"name": "previousOwner",
+							"type": "address"
+						},
+						{
+							"indexed": true,
+							"internalType": "address",
+							"name": "newOwner",
+							"type": "address"
+						}
+					],
+					"name": "OwnershipTransferred",
+					"type": "event"
+				},
+				{
+					"inputs": [],
+					"name": "betCount",
+					"outputs": [
+						{
+							"internalType": "uint256",
+							"name": "",
+							"type": "uint256"
+						}
+					],
+					"stateMutability": "view",
+					"type": "function"
+				},
+				{
+					"inputs": [
+						{
+							"internalType": "uint256",
+							"name": "",
+							"type": "uint256"
+						}
+					],
+					"name": "bets",
+					"outputs": [
+						{
+							"internalType": "contract Bet",
+							"name": "",
+							"type": "address"
+						}
+					],
+					"stateMutability": "view",
+					"type": "function"
+				},
+				{
+					"inputs": [
+						{
+							"internalType": "address payable",
+							"name": "player1",
+							"type": "address"
+						},
+						{
+							"internalType": "address payable",
+							"name": "player2",
+							"type": "address"
+						},
+						{
+							"internalType": "uint256",
+							"name": "amount",
+							"type": "uint256"
+						},
+						{
+							"internalType": "bool",
+							"name": "resolved",
+							"type": "bool"
+						}
+					],
+					"name": "deployBet",
+					"outputs": [],
+					"stateMutability": "nonpayable",
+					"type": "function"
+				},
+				{
+					"inputs": [
+						{
+							"internalType": "uint256",
+							"name": "index",
+							"type": "uint256"
+						}
+					],
+					"name": "getBet",
+					"outputs": [
+						{
+							"internalType": "contract Bet",
+							"name": "",
+							"type": "address"
+						}
+					],
+					"stateMutability": "view",
+					"type": "function"
+				},
+				{
+					"inputs": [],
+					"name": "owner",
+					"outputs": [
+						{
+							"internalType": "address",
+							"name": "",
+							"type": "address"
+						}
+					],
+					"stateMutability": "view",
+					"type": "function"
+				},
+				{
+					"inputs": [],
+					"name": "renounceOwnership",
+					"outputs": [],
+					"stateMutability": "nonpayable",
+					"type": "function"
+				},
+				{
+					"inputs": [
+						{
+							"internalType": "address",
+							"name": "newOwner",
+							"type": "address"
+						}
+					],
+					"name": "transferOwnership",
+					"outputs": [],
+					"stateMutability": "nonpayable",
+					"type": "function"
+				}
+			]
+		}
+	}
+}
