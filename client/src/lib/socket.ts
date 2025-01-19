@@ -4,9 +4,7 @@
 "use client";
 
 import { io } from "socket.io-client";
-import { StreamData, HandData, VideoTrackData } from "../interfaces/stream.model";
-import { ItemData } from "../interfaces/attack.model";
-import { HealthData } from "../interfaces/stats.model";
+import { StreamData, VideoTrackData } from "../interfaces/stream.model";
 
 export const socket = io();
 

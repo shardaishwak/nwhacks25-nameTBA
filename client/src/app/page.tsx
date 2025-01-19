@@ -53,6 +53,7 @@ export default function Home() {
   const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(
     null
   );
+
   const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null);
   const [remoteCtx, setRemoteCtx] = useState<CanvasRenderingContext2D | null>(
     null
@@ -74,6 +75,7 @@ export default function Home() {
   const localStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
+
     const initializeFaceLandmarker = async () => {
       try {
         const filesetResolver = await FilesetResolver.forVisionTasks(
