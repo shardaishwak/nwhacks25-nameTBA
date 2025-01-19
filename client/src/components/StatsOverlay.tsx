@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // components/StatsOverlay.tsx
 
 import React, { useState, useEffect, useRef } from "react";
@@ -41,7 +42,10 @@ export default function StatsOverlay({
 
 	useEffect(() => {
 		if (remoteHealth > 0) {
-			playSound("punch");
+			const options = ["punch", "slap-2", "slap", "sowrds"];
+
+			// @ts-ignore
+			playSound(options[Math.floor(Math.random() * options.length)]);
 		} else {
 			playSound("knockout");
 		}

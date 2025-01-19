@@ -1,97 +1,115 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-'use client';
+"use client";
 
-import React, { useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
-import useMediapipe from '../hooks/useMediapipe';
-import useSocketIO from '../hooks/useSocketIO';
-import RemoteVideoSection from '@/components/RemoteVideoSection';
-import StatsOverlay from '@/components/StatsOverlay';
-import LocalVideoSection from '@/components/LocalVideoSection';
-import useWebRTC from '../hooks/useWebRTC';
-
+import React, { useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
+import useMediapipe from "../hooks/useMediapipe";
+import useSocketIO from "../hooks/useSocketIO";
+import RemoteVideoSection from "@/components/RemoteVideoSection";
+import StatsOverlay from "@/components/StatsOverlay";
+import LocalVideoSection from "@/components/LocalVideoSection";
+import useWebRTC from "../hooks/useWebRTC";
+import { playSound, renderVisual } from "@/lib/utilts";
 
 export default function CallPage() {
-  const { roomId } = useParams() as { roomId: string };
+	const { roomId } = useParams() as { roomId: string };
 
-  // -------------- Video Refs --------------
-  const localVideoRef = useRef<HTMLVideoElement>(null!) as React.RefObject<HTMLVideoElement>;
-  const remoteVideoRef = useRef<HTMLVideoElement>(null!) as React.RefObject<HTMLVideoElement>;
+	// -------------- Video Refs --------------
+	const localVideoRef = useRef<HTMLVideoElement>(
+		null!
+	) as React.RefObject<HTMLVideoElement>;
+	const remoteVideoRef = useRef<HTMLVideoElement>(
+		null!
+	) as React.RefObject<HTMLVideoElement>;
 
-  // -------------- Canvas Refs (face/hand for each side) --------------
-  const localFaceCanvasRef = useRef<HTMLCanvasElement>(null!) as React.RefObject<HTMLCanvasElement>;
-  const localHandCanvasRef = useRef<HTMLCanvasElement>(null!) as React.RefObject<HTMLCanvasElement>;
-  const remoteFaceCanvasRef = useRef<HTMLCanvasElement>(null!) as React.RefObject<HTMLCanvasElement>;
-  const remoteHandCanvasRef = useRef<HTMLCanvasElement>(null!) as React.RefObject<HTMLCanvasElement>;
+	// -------------- Canvas Refs (face/hand for each side) --------------
+	const localFaceCanvasRef = useRef<HTMLCanvasElement>(
+		null!
+	) as React.RefObject<HTMLCanvasElement>;
+	const localHandCanvasRef = useRef<HTMLCanvasElement>(
+		null!
+	) as React.RefObject<HTMLCanvasElement>;
+	const remoteFaceCanvasRef = useRef<HTMLCanvasElement>(
+		null!
+	) as React.RefObject<HTMLCanvasElement>;
+	const remoteHandCanvasRef = useRef<HTMLCanvasElement>(
+		null!
+	) as React.RefObject<HTMLCanvasElement>;
 
-  // -------------- Collision & Speed States --------------
-  const [handSpeed, setHandSpeed] = useState<number>(0);
-  // const [handDirection, setHandDirection] = useState<number>(0);
-  const [isColliding, setIsColliding] = useState<boolean>(false);
+	// -------------- Collision & Speed States --------------
+	const [handSpeed, setHandSpeed] = useState<number>(0);
+	// const [handDirection, setHandDirection] = useState<number>(0);
+	const [isColliding, setIsColliding] = useState<boolean>(false);
 
-  const [remoteHandSpeed, setRemoteHandSpeed] = useState<number>(0);
-  // const [remoteHandDirection, setRemoteHandDirection] = useState<number>(0);
-  const [isRemoteColliding, setIsRemoteColliding] = useState<boolean>(false);
+	const [remoteHandSpeed, setRemoteHandSpeed] = useState<number>(0);
+	// const [remoteHandDirection, setRemoteHandDirection] = useState<number>(0);
+	const [isRemoteColliding, setIsRemoteColliding] = useState<boolean>(false);
 
-  // -------------- Hooks: Socket + WebRTC --------------
-  const { socketRef } = useSocketIO(roomId);
-  const { peerConnectionRef, remoteStreamExists } = useWebRTC({
-    roomId,
-    socketRef,
-    localVideoRef,
-    remoteVideoRef,
-  });
+	// -------------- Hooks: Socket + WebRTC --------------
+	const { socketRef } = useSocketIO(roomId);
+	const { peerConnectionRef, remoteStreamExists } = useWebRTC({
+		roomId,
+		socketRef,
+		localVideoRef,
+		remoteVideoRef,
+	});
 
-  // -------------- Hook: Mediapipe (Face/Hand) --------------
-  useMediapipe({
-    roomId,
-    socketRef,
-    localVideoRef,
-    remoteVideoRef,
-    localFaceCanvasRef,
-    localHandCanvasRef,
-    remoteFaceCanvasRef,
-    remoteHandCanvasRef,
-    remoteStreamExists,
-    isColliding,
-    setIsColliding,
-    isRemoteColliding,
-    setIsRemoteColliding,
-    setHandSpeed,
-    setRemoteHandSpeed,
-  });
+	// -------------- Hook: Mediapipe (Face/Hand) --------------
+	useMediapipe({
+		roomId,
+		socketRef,
+		localVideoRef,
+		remoteVideoRef,
+		localFaceCanvasRef,
+		localHandCanvasRef,
+		remoteFaceCanvasRef,
+		remoteHandCanvasRef,
+		remoteStreamExists,
+		isColliding,
+		setIsColliding,
+		isRemoteColliding,
+		setIsRemoteColliding,
+		setHandSpeed,
+		setRemoteHandSpeed,
+	});
 
-  return (
-    <div className="w-full h-screen bg-gray-800 relative">
-      {/* Main remote video container */}
-      <div className="w-full h-full">
-        <RemoteVideoSection
-          remoteVideoRef={remoteVideoRef}
-          remoteStreamExists={remoteStreamExists}
-          remoteFaceCanvasRef={remoteFaceCanvasRef}
-          localHandCanvasRef={localHandCanvasRef}
-        />
-      </div>
+	useEffect(() => {
+		setTimeout(() => {
+			playSound("ready-go");
+			renderVisual("ready-go");
+		}, 1000);
+	}, []);
 
-      {/* Floating local video container */}
-      <div className="absolute top-4 right-4 w-72 aspect-video rounded-lg overflow-hidden shadow-lg">
-        <LocalVideoSection
-          localVideoRef={localVideoRef}
-          localFaceCanvasRef={localFaceCanvasRef}
-          remoteHandCanvasRef={remoteHandCanvasRef}
-        />
-      </div>
+	return (
+		<div className="w-full h-screen bg-gray-800 relative">
+			{/* Main remote video container */}
+			<div className="w-full h-full">
+				<RemoteVideoSection
+					remoteVideoRef={remoteVideoRef}
+					remoteStreamExists={remoteStreamExists}
+					remoteFaceCanvasRef={remoteFaceCanvasRef}
+					localHandCanvasRef={localHandCanvasRef}
+				/>
+			</div>
 
-      {/* Bottom stats overlay */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full">
-        <StatsOverlay
-          handSpeed={handSpeed}
-          isColliding={isColliding}
-          remoteHandSpeed={remoteHandSpeed}
-          isRemoteColliding={isRemoteColliding}
-          
-        />
-      </div>
-    </div>
-  );
+			{/* Floating local video container */}
+			<div className="absolute top-4 right-4 w-72 aspect-video rounded-lg overflow-hidden shadow-lg">
+				<LocalVideoSection
+					localVideoRef={localVideoRef}
+					localFaceCanvasRef={localFaceCanvasRef}
+					remoteHandCanvasRef={remoteHandCanvasRef}
+				/>
+			</div>
+
+			{/* Bottom stats overlay */}
+			<div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full">
+				<StatsOverlay
+					handSpeed={handSpeed}
+					isColliding={isColliding}
+					remoteHandSpeed={remoteHandSpeed}
+					isRemoteColliding={isRemoteColliding}
+				/>
+			</div>
+		</div>
+	);
 }
