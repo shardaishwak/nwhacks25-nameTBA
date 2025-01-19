@@ -26,7 +26,7 @@ export default function CallPage() {
 
   // -------------- Collision & Speed States --------------
   const [handSpeed, setHandSpeed] = useState<number>(0);
-  const [handDirection, setHandDirection] = useState<number>(0);
+//   const [handDirection, setHandDirection] = useState<number>(0);
   const [isColliding, setIsColliding] = useState<boolean>(false);
 
   const [remoteHandSpeed, setRemoteHandSpeed] = useState<number>(0);
@@ -58,9 +58,9 @@ export default function CallPage() {
     isRemoteColliding,
     setIsRemoteColliding,
     setHandSpeed,
-    setHandDirection,
+//     setHandDirection,
     setRemoteHandSpeed,
-    setRemoteHandDirection,
+//     setRemoteHandDirection,
   });
 
   return (
@@ -85,10 +85,8 @@ export default function CallPage() {
       {/* Stats HUD */}
       <StatsOverlay
         handSpeed={handSpeed}
-        handDirection={handDirection}
         isColliding={isColliding}
         remoteHandSpeed={remoteHandSpeed}
-        remoteHandDirection={remoteHandDirection}
         isRemoteColliding={isRemoteColliding}
       />
     </div>

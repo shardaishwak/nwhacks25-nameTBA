@@ -4,19 +4,19 @@ import React from 'react';
 
 interface StatsOverlayProps {
   handSpeed: number;
-  handDirection: number;
+  // handDirection: number;
   isColliding: boolean;
   remoteHandSpeed: number;
-  remoteHandDirection: number;
+  // remoteHandDirection: number;
   isRemoteColliding: boolean;
 }
 
 export default function StatsOverlay({
   handSpeed,
-  handDirection,
+  // handDirection,
   isColliding,
   remoteHandSpeed,
-  remoteHandDirection,
+  // remoteHandDirection,
   isRemoteColliding,
 }: StatsOverlayProps) {
   return (
@@ -34,7 +34,7 @@ export default function StatsOverlay({
               />
             </div>
           </div>
-          <div>
+          {/* <div>
             Direction: {handDirection.toFixed(0)}°
             <div className="relative w-8 h-8">
               <div
@@ -45,7 +45,7 @@ export default function StatsOverlay({
                 }}
               />
             </div>
-          </div>
+          </div> */}
           <div>
             Collision:{' '}
             <span className={isColliding ? 'text-red-500' : 'text-green-500'}>
@@ -66,7 +66,7 @@ export default function StatsOverlay({
               />
             </div>
           </div>
-          <div>
+          {/* <div>
             Direction: {remoteHandDirection.toFixed(0)}°
             <div className="relative w-8 h-8">
               <div
@@ -77,7 +77,7 @@ export default function StatsOverlay({
                 }}
               />
             </div>
-          </div>
+          </div> */}
           <div>
             Collision:{' '}
             <span

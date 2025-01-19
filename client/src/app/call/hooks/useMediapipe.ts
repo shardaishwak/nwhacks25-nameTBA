@@ -19,7 +19,7 @@ import {
   convertFaceLandmarksToBoundingBox,
   convertHandLandmarksToBoundingBox,
   calculateVelocity,
-  calculateDirection,
+  // calculateDirection,
   checkCollision,
 } from '@/lib/logic';
 import { drawHandEdges } from '@/utils/draw';
@@ -35,31 +35,31 @@ interface TimestampedPosition {
 interface UseMediapipeProps {
   roomId: string;
   socketRef: React.MutableRefObject<Socket | null>;
-  
+
   // Video refs
   localVideoRef: React.RefObject<HTMLVideoElement>;
   remoteVideoRef: React.RefObject<HTMLVideoElement>;
-  
+
   // Canvas refs
   localFaceCanvasRef: React.RefObject<HTMLCanvasElement>;
   localHandCanvasRef: React.RefObject<HTMLCanvasElement>;
   remoteFaceCanvasRef: React.RefObject<HTMLCanvasElement>;
   remoteHandCanvasRef: React.RefObject<HTMLCanvasElement>;
-  
+
   // Stream state
   remoteStreamExists: boolean;
-  
+
   // Collision states
   isColliding: boolean;
   setIsColliding: (value: boolean) => void;
   isRemoteColliding: boolean;
   setIsRemoteColliding: (value: boolean) => void;
-  
+
   // Movement states
   setHandSpeed: (value: number) => void;
-  setHandDirection: (value: number) => void;
+  // setHandDirection: (value: number) => void;
   setRemoteHandSpeed: (value: number) => void;
-  setRemoteHandDirection: (value: number) => void;
+  // setRemoteHandDirection: (value: number) => void;
 }
 
 /**
@@ -81,9 +81,9 @@ export default function useMediapipe({
   isRemoteColliding,
   setIsRemoteColliding,
   setHandSpeed,
-  setHandDirection,
+  // setHandDirection,
   setRemoteHandSpeed,
-  setRemoteHandDirection,
+  // setRemoteHandDirection,
 }: UseMediapipeProps) {
   // Add states for landmarkers and contexts
   const [localFaceLandmarker, setLocalFaceLandmarker] = useState<FaceLandmarker | null>(null);
@@ -273,11 +273,11 @@ export default function useMediapipe({
             const prev = localPreviousHandPositionRef.current;
             if (prev && timestamp - prev.timestamp > 0) {
               const velocity = calculateVelocity(currentHandBox, prev.box, timestamp - prev.timestamp);
-              const direction = calculateDirection(currentHandBox, prev.box);
+              // const direction = calculateDirection(currentHandBox, prev.box);
 
               // Speed & direction
               setHandSpeed(velocity * 1000);
-              setHandDirection(direction);
+              // setHandDirection(direction);
 
               // Check collision with remote face
               if (remoteFaceBoundingBox) {
@@ -290,7 +290,7 @@ export default function useMediapipe({
                     roomId,
                     data: {
                       speed: velocity,
-                      direction,
+                      // direction,
                       timestamp,
                     },
                   });
@@ -367,10 +367,10 @@ export default function useMediapipe({
             const prev = remotePreviousHandPositionRef.current;
             if (prev && timestamp - prev.timestamp > 0) {
               const velocity = calculateVelocity(currentHandBox, prev.box, timestamp - prev.timestamp);
-              const direction = calculateDirection(currentHandBox, prev.box);
+              // const direction = calculateDirection(currentHandBox, prev.box);
 
               setRemoteHandSpeed(velocity * 1000);
-              setRemoteHandDirection(direction);
+              // setRemoteHandDirection(direction);
 
               // Check collision with local face bounding box
               if (localFaceBoundingBox) {
@@ -418,7 +418,7 @@ export default function useMediapipe({
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
-  }, [roomId, socketRef, localVideoRef, remoteVideoRef, remoteFaceLandmarker, remoteHandLandmarker, localFaceLandmarker, localHandLandmarker, remoteStreamExists, localFaceCtx, localHandCtx, remoteFaceCtx, remoteHandCtx, localFaceBoundingBox, remoteFaceBoundingBox, localPreviousHandPositionRef, remotePreviousHandPositionRef, setRemoteFaceBoundingBox, setLocalFaceBoundingBox, setHandSpeed, setHandDirection, setIsColliding, setRemoteHandSpeed, setRemoteHandDirection, setIsRemoteColliding, localFaceCanvasRef, localHandCanvasRef, remoteFaceCanvasRef, remoteHandCanvasRef]);
+  }, [roomId, socketRef, localVideoRef, remoteVideoRef, remoteFaceLandmarker, remoteHandLandmarker, localFaceLandmarker, localHandLandmarker, remoteStreamExists, localFaceCtx, localHandCtx, remoteFaceCtx, remoteHandCtx, localFaceBoundingBox, remoteFaceBoundingBox, localPreviousHandPositionRef, remotePreviousHandPositionRef, setRemoteFaceBoundingBox, setLocalFaceBoundingBox, setHandSpeed, setIsColliding, setRemoteHandSpeed, setIsRemoteColliding, localFaceCanvasRef, localHandCanvasRef, remoteFaceCanvasRef, remoteHandCanvasRef]);
 
   // -----------------------------------------
   // 3) Play sound effect on collisions
