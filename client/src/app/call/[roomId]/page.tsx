@@ -253,7 +253,7 @@ export default function RoomPage() {
 
 					if (faceResults?.faceLandmarks) {
 						faceResults.faceLandmarks.forEach((landmarks) => {
-							drawFaceBoundingBox(landmarks, localFaceCtx, localFaceCanvasRef.current, true);
+							drawFaceBoundingBox(landmarks, localFaceCtx, localFaceCanvasRef.current as HTMLCanvasElement, true);
 						});
 					}
 				}
@@ -265,7 +265,7 @@ export default function RoomPage() {
 
 					if (handResults?.landmarks) {
 						handResults.landmarks.forEach((landmarks) => {
-							drawHandEdges(landmarks, localHandCtx, localHandCanvasRef.current, true);
+							drawHandEdges(landmarks, localHandCtx, localHandCanvasRef.current as HTMLCanvasElement, true);
 						});
 					}
 				}
@@ -296,7 +296,7 @@ export default function RoomPage() {
 
 					if (faceResults?.faceLandmarks) {
 						faceResults.faceLandmarks.forEach((landmarks) => {
-							drawFaceBoundingBox(landmarks, remoteFaceCtx, remoteFaceCanvasRef.current, false);
+							drawFaceBoundingBox(landmarks, remoteFaceCtx, remoteFaceCanvasRef.current as HTMLCanvasElement, false);
 						});
 					}
 				}
@@ -308,7 +308,7 @@ export default function RoomPage() {
 
 					if (handResults?.landmarks) {
 						handResults.landmarks.forEach((landmarks) => {
-							drawHandEdges(landmarks, remoteHandCtx, remoteHandCanvasRef.current, false);
+							drawHandEdges(landmarks, remoteHandCtx, remoteHandCanvasRef.current as HTMLCanvasElement, false);
 						});
 					}
 				}

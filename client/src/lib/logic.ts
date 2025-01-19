@@ -102,7 +102,7 @@ export function calculateDirection(
     const dy = currentCenter.y - previousCenter.y;
     
     // Calculate angle in degrees (-180 to +180)
-    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
     
     return angle;
 }
