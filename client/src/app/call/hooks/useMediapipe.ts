@@ -24,6 +24,7 @@ import {
 } from "@/lib/logic";
 import { drawHandEdges } from "@/utils/draw";
 import { drawFaceBoundingBox } from "@/utils/draw";
+import { generateInterpolatedFrames } from '@/lib/interpolation';
 
 /** The props you'll pass from your main RoomPage component. */
 interface UseMediapipeProps {
@@ -239,7 +240,7 @@ export default function useMediapipe({
 		const animate = async () => {
 			const timestamp = performance.now();
 
-			// ~60 FPS throttle
+			// Increase minimum frame check interval but interpolate between frames
 			if (timestamp - lastProcessedTimestamp < 16) {
 				animationFrameId = requestAnimationFrame(animate);
 				return;
@@ -286,26 +287,38 @@ export default function useMediapipe({
 
 						const prev = localPreviousHandPositionRef.current;
 						if (prev && timestamp - prev.timestamp > 0) {
-							const velocity = calculateVelocity(
-								currentHandBox,
+							const timeElapsed = timestamp - prev.timestamp;
+							
+							// Generate interpolated frames
+							const interpolatedFrames = generateInterpolatedFrames(
 								prev.box,
-								timestamp - prev.timestamp
+								currentHandBox,
+								timeElapsed
 							);
 
-							// Speed
-							setHandSpeed(velocity * 1000);
-
-							// Check collision with remote face
+							// Check collisions for all interpolated frames
+							let hasCollided = false;
 							if (remoteFaceBoundingBox) {
-								const collision = checkCollision(
+								hasCollided = interpolatedFrames.some(frame => 
+									checkCollision(frame, remoteFaceBoundingBox, true)
+								);
+								
+								// Also check current frame
+								hasCollided = hasCollided || checkCollision(
 									currentHandBox,
 									remoteFaceBoundingBox,
 									true
 								);
-								setIsColliding(collision);
 
-								// Emit collision event
-								if (collision && socketRef.current) {
+								setIsColliding(hasCollided);
+
+								// Emit collision event with interpolated velocity
+								if (hasCollided && socketRef.current) {
+									const velocity = calculateVelocity(
+										currentHandBox,
+										prev.box,
+										timeElapsed
+									);
 									socketRef.current.emit("collision", {
 										roomId,
 										data: {
