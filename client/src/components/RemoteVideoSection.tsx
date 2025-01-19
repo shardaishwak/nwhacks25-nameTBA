@@ -18,13 +18,13 @@ export default function RemoteVideoSection({
 }: RemoteVideoSectionProps) {
   // const scale = useHeightScaling();
   
-  // const containerStyle = {
-  //   width: `${640 * scale}px`,
-  //   height: `${480 * scale}px`,
-  // };
+  const containerStyle = {
+    width: `${640}px`,
+    height: `${480}px`,
+  };
 
   return (
-    <div className="relative mx-auto rounded-lg overflow-hidden shadow-lg">
+    <div className="relative mx-auto rounded-lg overflow-hidden shadow-lg" style={containerStyle}>
       {/* Remote video (mirrored) */}
       <video
         ref={remoteVideoRef}
