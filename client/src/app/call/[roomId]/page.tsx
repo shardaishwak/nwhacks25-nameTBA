@@ -4,23 +4,23 @@ import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { io } from "socket.io-client";
 import {
-    HandLandmarker,
-    FaceLandmarker,
-    FilesetResolver,
+	HandLandmarker,
+	FaceLandmarker,
+	FilesetResolver,
 } from "@mediapipe/tasks-vision";
-import { 
-    convertHandLandmarksToBoundingBox, 
-    convertFaceLandmarksToBoundingBox,
-    calculateVelocity,
-    calculateDirection,
-    checkCollision 
+import {
+	convertHandLandmarksToBoundingBox,
+	convertFaceLandmarksToBoundingBox,
+	calculateVelocity,
+	calculateDirection,
+	checkCollision
 } from '@/lib/logic';
 import { HandData, FaceData, HandLandmark, FaceLandmark, DetectionResults, HandDetectionResults, BoundingBox } from '@/interfaces/hand.model';
 
 // Add this interface near the top with other imports
 interface TimestampedPosition {
-    box: BoundingBox;
-    timestamp: number;
+	box: BoundingBox;
+	timestamp: number;
 }
 
 export default function RoomPage() {
@@ -153,11 +153,11 @@ export default function RoomPage() {
 
 			const timestamp = performance.now();
 
-			 // Only process if enough time has passed (e.g., every 16ms for 60fps)
-            if (timestamp - lastProcessedTimestamp < 16) {
-                animationFrameId = requestAnimationFrame(animate);
-                return;
-            }
+			// Only process if enough time has passed (e.g., every 16ms for 60fps)
+			if (timestamp - lastProcessedTimestamp < 16) {
+				animationFrameId = requestAnimationFrame(animate);
+				return;
+			}
 
 			// --- Detect and draw for LOCAL video ---
 			if (
@@ -176,8 +176,8 @@ export default function RoomPage() {
 					timestamp
 				) as HandDetectionResults;
 
-				console.log(handResults);
-				
+				// console.log(handResults);
+
 				// Process hand movements and collisions
 				if (handResults?.landmarks && handResults.landmarks.length > 0) {
 					// Only process the first hand (index 0)
@@ -188,45 +188,45 @@ export default function RoomPage() {
 						timestamp
 					};
 
-					console.log(previousHandPositionRef.current);
-					
+					// console.log(previousHandPositionRef.current);
+
 					const previous = previousHandPositionRef.current;
-                    
-                    if (previous && (timestamp - previous.timestamp) > 0) {
-                        const velocity = calculateVelocity(
-                            currentPosition.box,
-                            previous.box,
-                            timestamp - previous.timestamp
-                        );
-                        const direction = calculateDirection(currentPosition.box, previous.box);
 
-                        // Scale velocity to make it more readable
-                        setHandSpeed(velocity * 1000);
-                        setHandDirection(direction);
+					if (previous && (timestamp - previous.timestamp) > 0) {
+						const velocity = calculateVelocity(
+							currentPosition.box,
+							previous.box,
+							timestamp - previous.timestamp
+						);
+						const direction = calculateDirection(currentPosition.box, previous.box);
 
-                        // Process face collision
-                        if (faceResults?.faceLandmarks?.[0]) {
-                            const faceLandmarks = faceResults.faceLandmarks[0];
-                            const faceBox = convertFaceLandmarksToBoundingBox(faceLandmarks);
-                            const collision = checkCollision(currentPosition.box, faceBox);
-                            setIsColliding(collision);
+						// Scale velocity to make it more readable
+						setHandSpeed(velocity * 1000);
+						setHandDirection(direction);
 
-                            if (collision) {
-                                socketRef.current?.emit('collision', {
-                                    roomId,
-                                    data: {
-                                        speed: velocity,
-                                        direction,
-                                        timestamp
-                                    }
-                                });
-                            }
-                        }
-                    }
+						// Process face collision
+						if (faceResults?.faceLandmarks?.[0]) {
+							const faceLandmarks = faceResults.faceLandmarks[0];
+							const faceBox = convertFaceLandmarksToBoundingBox(faceLandmarks);
+							const collision = checkCollision(currentPosition.box, faceBox);
+							setIsColliding(collision);
 
-                    // Update the ref with current position
-                    previousHandPositionRef.current = currentPosition;
-                }
+							if (collision) {
+								socketRef.current?.emit('collision', {
+									roomId,
+									data: {
+										speed: velocity,
+										direction,
+										timestamp
+									}
+								});
+							}
+						}
+					}
+
+					// Update the ref with current position
+					previousHandPositionRef.current = currentPosition;
+				}
 
 				// Draw face landmarks on localFaceCanvas
 				if (localFaceCtx && localFaceCanvasRef.current) {
@@ -297,17 +297,17 @@ export default function RoomPage() {
 			}
 
 			lastProcessedTimestamp = timestamp;
-            animationFrameId = requestAnimationFrame(animate);
-        };
+			animationFrameId = requestAnimationFrame(animate);
+		};
 
-        animate();
+		animate();
 
-        return () => {
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-            }
-        };
-    }, [faceLandmarker, handLandmarker, remoteStreamExists]);
+		return () => {
+			if (animationFrameId) {
+				cancelAnimationFrame(animationFrameId);
+			}
+		};
+	}, [faceLandmarker, handLandmarker, remoteStreamExists]);
 
 	// 3) WebRTC + Socket.IO logic
 	useEffect(() => {
@@ -562,16 +562,16 @@ export default function RoomPage() {
 		// Draw palm base
 		ctx.beginPath();
 		ctx.moveTo(getX(handPoints.wrist.x), getY(handPoints.wrist.y));
-		[handPoints.thumb[0], handPoints.index[0], handPoints.middle[0], 
-		 handPoints.ring[0], handPoints.pinky[0]].forEach(point => {
+		[handPoints.thumb[0], handPoints.index[0], handPoints.middle[0],
+		handPoints.ring[0], handPoints.pinky[0]].forEach(point => {
 			ctx.lineTo(getX(point.x), getY(point.y));
 		});
 		ctx.closePath();
 		ctx.stroke();
 
 		// Draw fingers
-		[handPoints.thumb, handPoints.index, handPoints.middle, 
-		 handPoints.ring, handPoints.pinky].forEach(finger => {
+		[handPoints.thumb, handPoints.index, handPoints.middle,
+		handPoints.ring, handPoints.pinky].forEach(finger => {
 			drawFinger(finger);
 		});
 
@@ -652,7 +652,7 @@ export default function RoomPage() {
 					<div>
 						Speed: {handSpeed.toFixed(2)} units/ms
 						<div className="w-32 h-2 bg-gray-700 rounded">
-							<div 
+							<div
 								className="h-full bg-green-500 rounded transition-all"
 								style={{ width: `${Math.min(handSpeed * 100, 100)}%` }}
 							/>
@@ -661,9 +661,9 @@ export default function RoomPage() {
 					<div>
 						Direction: {handDirection.toFixed(0)}°
 						<div className="relative w-8 h-8">
-							<div 
+							<div
 								className="absolute w-6 h-1 bg-blue-500 origin-left"
-								style={{ 
+								style={{
 									transform: `rotate(${handDirection}deg)`,
 									transformOrigin: 'center'
 								}}
