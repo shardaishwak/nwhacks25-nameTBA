@@ -26,11 +26,11 @@ export default function CallPage() {
 
   // -------------- Collision & Speed States --------------
   const [handSpeed, setHandSpeed] = useState<number>(0);
-//   const [handDirection, setHandDirection] = useState<number>(0);
+  // const [handDirection, setHandDirection] = useState<number>(0);
   const [isColliding, setIsColliding] = useState<boolean>(false);
 
   const [remoteHandSpeed, setRemoteHandSpeed] = useState<number>(0);
-  const [remoteHandDirection, setRemoteHandDirection] = useState<number>(0);
+  // const [remoteHandDirection, setRemoteHandDirection] = useState<number>(0);
   const [isRemoteColliding, setIsRemoteColliding] = useState<boolean>(false);
 
   // -------------- Hooks: Socket + WebRTC --------------

@@ -117,8 +117,10 @@ export function checkCollision(box1: BoundingBox, box2: BoundingBox, shouldMirro
 
 export function calculateDamage(velocity: number, powerups: Powerup[] = []): DamageData {
 
+    const velocityScaler = 10; // Arbitrary scaling factor
+
     const isCritical = Math.random() < 0.1; // 10% chance of critical hit
-    const baseDamage = velocity * (isCritical ? 2 : 1); // Double damage on critical hit
+    const baseDamage = velocity * velocityScaler * (isCritical ? 2 : 1); // Double damage on critical hit
     let finalDamage = baseDamage;
 
     if (powerups.length > 0) {
