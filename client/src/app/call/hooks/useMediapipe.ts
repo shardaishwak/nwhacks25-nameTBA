@@ -14,6 +14,7 @@ import {
 	DetectionResults,
 	HandDetectionResults,
 	BoundingBox,
+	TimestampedPosition,
 } from "@/interfaces/hand.model";
 
 import {
@@ -24,12 +25,6 @@ import {
 } from '@/lib/logic';
 import { drawHandEdges } from '@/utils/draw';
 import { drawFaceBoundingBox } from '@/utils/draw';
-
-/** Used to track the bounding box + timestamp for velocity calculations. */
-interface TimestampedPosition {
-	box: BoundingBox;
-	timestamp: number;
-}
 
 /** The props you'll pass from your main RoomPage component. */
 interface UseMediapipeProps {
@@ -57,9 +52,9 @@ interface UseMediapipeProps {
 
 	// Movement states
 	setHandSpeed: (value: number) => void;
-	// setHandDirection: (value: number) => void;
 	setRemoteHandSpeed: (value: number) => void;
-	// setRemoteHandDirection: (value: number) => void;
+	remotePreviousHandPositionRef: React.MutableRefObject<TimestampedPosition | null>;
+	localPreviousHandPositionRef: React.MutableRefObject<TimestampedPosition | null>;
 }
 
 /**
@@ -81,9 +76,9 @@ export default function useMediapipe({
 	isRemoteColliding,
 	setIsRemoteColliding,
 	setHandSpeed,
-	// setHandDirection,
 	setRemoteHandSpeed,
-	// setRemoteHandDirection,
+	remotePreviousHandPositionRef,
+	localPreviousHandPositionRef,
 }: UseMediapipeProps) {
 	// Add states for landmarkers and contexts
 	const [localFaceLandmarker, setLocalFaceLandmarker] =
@@ -104,20 +99,11 @@ export default function useMediapipe({
 	const [remoteHandCtx, setRemoteHandCtx] =
 		useState<CanvasRenderingContext2D | null>(null);
 
-	// Add refs for tracking positions
-	const localPreviousHandPositionRef = useRef<TimestampedPosition | null>(null);
-	const remotePreviousHandPositionRef = useRef<TimestampedPosition | null>(
-		null
-	);
-
 	// Add states for face bounding boxes
 	const [localFaceBoundingBox, setLocalFaceBoundingBox] =
 		useState<BoundingBox | null>(null);
 	const [remoteFaceBoundingBox, setRemoteFaceBoundingBox] =
 		useState<BoundingBox | null>(null);
-
-	// Add a ref for localFaceBoundingBox
-	// const localFaceBoundingBoxRef = useRef<BoundingBox | null>(null);
 
 	// -----------------------------------------
 	// 1) Initialize Mediapipe Face & Hand
@@ -239,109 +225,6 @@ export default function useMediapipe({
 		setRemoteHandLandmarker,
 	]);
 
-	// useEffect(() => {
-	// 	socketRef.current?.on("face", ({ data }) => {
-	// 		console.log(data);
-
-	// 		const faceResults = data?.faceResults as DetectionResults;
-	// 		if (faceResults?.faceLandmarks?.[0]) {
-	// 			const faceLm = faceResults.faceLandmarks[0];
-	// 			const faceBox = convertFaceLandmarksToBoundingBox(faceLm);
-	// 			setRemoteFaceBoundingBox(faceBox);
-	// 		}
-	// 		if (remoteFaceCtx && remoteFaceCanvasRef.current) {
-	// 			const faceCanvas = remoteFaceCanvasRef.current;
-	// 			remoteFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
-
-	// 			if (faceResults?.faceLandmarks) {
-	// 				faceResults.faceLandmarks.forEach((lm) => {
-	// 					drawFaceBoundingBox(lm, remoteFaceCtx, faceCanvas, false);
-	// 				});
-	// 			}
-	// 		}
-	// 	});
-	// }, [socketRef, cachedRemote]);
-
-	// const runFaceRemote = async (data: DetectionResults) => {
-	// 	const faceResults = data as DetectionResults;
-	// 	if (faceResults?.faceLandmarks?.[0]) {
-	// 		const faceLm = faceResults.faceLandmarks[0];
-	// 		const faceBox = convertFaceLandmarksToBoundingBox(faceLm);
-	// 		setRemoteFaceBoundingBox(faceBox);
-	// 	}
-	// 	if (remoteFaceCtx && remoteFaceCanvasRef.current) {
-	// 		const faceCanvas = remoteFaceCanvasRef.current;
-	// 		remoteFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
-
-	// 		if (faceResults?.faceLandmarks) {
-	// 			faceResults.faceLandmarks.forEach((lm) => {
-	// 				drawFaceBoundingBox(lm, remoteFaceCtx, faceCanvas, false);
-	// 			});
-	// 		}
-	// 	}
-	// };
-
-	// const runHandRemote = async (
-	// 	handResults: HandDetectionResults,
-	// 	timestamp: number
-	// ) => {
-	// 	if (handResults?.landmarks && handResults.landmarks[0]) {
-	// 		const handLm = handResults.landmarks[0];
-	// 		const currentHandBox = convertHandLandmarksToBoundingBox(handLm);
-	// 		const currentPosition: TimestampedPosition = {
-	// 			box: currentHandBox,
-	// 			timestamp: timestamp,
-	// 		};
-
-	// 		const prev = remotePreviousHandPositionRef.current;
-	// 		if (prev && timestamp - prev.timestamp > 0) {
-	// 			const velocity = calculateVelocity(
-	// 				currentHandBox,
-	// 				prev.box,
-	// 				timestamp - prev.timestamp
-	// 			);
-	// 			const direction = calculateDirection(currentHandBox, prev.box);
-
-	// 			setRemoteHandSpeed(velocity * 1000);
-	// 			setRemoteHandDirection(direction);
-
-	// 			// Check collision with local face bounding box
-	// 			if (localFaceBoundingBoxRef.current) {
-	// 				const collision = checkCollision(
-	// 					currentHandBox,
-	// 					localFaceBoundingBoxRef.current,
-	// 					true
-	// 				);
-	// 				setIsRemoteColliding(collision);
-	// 			}
-	// 		}
-	// 		remotePreviousHandPositionRef.current = currentPosition;
-	// 	}
-	// 	if (remoteHandCtx && remoteHandCanvasRef.current) {
-	// 		const handCanvas = remoteHandCanvasRef.current;
-	// 		remoteHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
-
-	// 		if (handResults?.landmarks) {
-	// 			handResults.landmarks.forEach((lm) => {
-	// 				drawHandEdges(lm, remoteHandCtx, handCanvas, false);
-	// 			});
-	// 		}
-	// 	}
-	// };
-
-	// useEffect(() => {
-	// 	socketRef?.current?.on("update", ({ data }) => {
-	// 		const handResults = data?.handResults as HandDetectionResults;
-	// 		runFaceRemote(data?.faceResults as DetectionResults);
-	// 		runHandRemote(handResults, data.timestamp);
-	// 	});
-	// }, [socketRef, runFaceRemote, runHandRemote, setLocalFaceBoundingBox]);
-
-	// // Update the ref whenever localFaceBoundingBox changes
-	// useEffect(() => {
-	// 	localFaceBoundingBoxRef.current = localFaceBoundingBox;
-	// }, [localFaceBoundingBox]);
-
 	// -----------------------------------------
 	// 2) Per-frame detection + drawing
 	// -----------------------------------------
@@ -385,15 +268,6 @@ export default function useMediapipe({
 						video,
 						roundedTimestamp
 					)) as HandDetectionResults;
-
-					// socketRef.current?.emit("update", {
-					// 	roomId,
-					// 	data: {
-					// 		faceResults,
-					// 		handResults,
-					// 		timestamp,
-					// 	},
-					// });
 
 					// 1) Track local face bounding box
 					if (faceResults?.faceLandmarks?.[0]) {

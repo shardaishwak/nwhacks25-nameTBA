@@ -3,12 +3,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { calculateDamage } from '@/lib/logic';
 import { HealthScoreIcon } from './healthScore';
+import { TimestampedPosition } from '@/interfaces/hand.model';
 
 interface StatsOverlayProps {
   handSpeed: number;
   isColliding: boolean;
   remoteHandSpeed: number;
   isRemoteColliding: boolean;
+	remotePreviousHandPositionRef: React.MutableRefObject<TimestampedPosition | null>;
+	localPreviousHandPositionRef: React.MutableRefObject<TimestampedPosition | null>;
 }
 
 export default function StatsOverlay({
@@ -16,6 +19,8 @@ export default function StatsOverlay({
   isColliding,
   remoteHandSpeed,
   isRemoteColliding,
+  remotePreviousHandPositionRef,
+  localPreviousHandPositionRef,
 }: StatsOverlayProps) {
 
   const [localLastInflictedDamage, setLocalLastInflictedDamage] = useState<number>(0);
@@ -30,21 +35,39 @@ export default function StatsOverlay({
 
   useEffect(() => {
     if (isColliding && !prevLocalCollision.current) {
-      const damage = calculateDamage(handSpeed);
-      setRemoteLastInflictedDamage(damage.damage);
-      setRemoteHealth(prev => Math.max(0, prev - damage.damage));
+      const currentTime = Date.now();
+      const lastHitTime = localPreviousHandPositionRef.current?.timestamp ?? 0;
+      
+      // 500ms cooldown between hits
+      if (currentTime - lastHitTime > 500) {
+        const damage = calculateDamage(handSpeed);
+        setRemoteLastInflictedDamage(damage.damage);
+        setRemoteHealth(prev => Math.max(0, prev - damage.damage));
+        if (localPreviousHandPositionRef.current) {
+          localPreviousHandPositionRef.current.timestamp = currentTime;
+        }
+      }
     }
     prevLocalCollision.current = isColliding;
-  }, [isColliding, handSpeed]);
+  }, [isColliding, handSpeed, localPreviousHandPositionRef]);
 
   useEffect(() => {
     if (isRemoteColliding && !prevRemoteCollision.current) {
-      const damage = calculateDamage(remoteHandSpeed);
-      setLocalLastInflictedDamage(damage.damage);
-      setLocalHealth(prev => Math.max(0, prev - damage.damage));
+      const currentTime = Date.now();
+      const lastHitTime = remotePreviousHandPositionRef.current?.timestamp ?? 0;
+
+      // 500ms cooldown between hits
+      if (currentTime - lastHitTime > 500) {
+        const damage = calculateDamage(remoteHandSpeed);
+        setLocalLastInflictedDamage(damage.damage);
+        setLocalHealth(prev => Math.max(0, prev - damage.damage));
+        if (remotePreviousHandPositionRef.current) {
+          remotePreviousHandPositionRef.current.timestamp = currentTime;
+        }
+      }
     }
     prevRemoteCollision.current = isRemoteColliding;
-  }, [isRemoteColliding, remoteHandSpeed]);
+  }, [isRemoteColliding, remoteHandSpeed, remotePreviousHandPositionRef]);
 
   return (
     <div className="bg-black/50 p-4 rounded-lg text-white font-mono">

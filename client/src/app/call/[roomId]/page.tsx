@@ -9,6 +9,7 @@ import RemoteVideoSection from '@/components/RemoteVideoSection';
 import StatsOverlay from '@/components/StatsOverlay';
 import LocalVideoSection from '@/components/LocalVideoSection';
 import useWebRTC from '../hooks/useWebRTC';
+import { TimestampedPosition } from '@/interfaces/hand.model';
 
 
 export default function CallPage() {
@@ -28,10 +29,14 @@ export default function CallPage() {
   const [handSpeed, setHandSpeed] = useState<number>(0);
   // const [handDirection, setHandDirection] = useState<number>(0);
   const [isColliding, setIsColliding] = useState<boolean>(false);
+	const localPreviousHandPositionRef = useRef<TimestampedPosition | null>(null);
 
   const [remoteHandSpeed, setRemoteHandSpeed] = useState<number>(0);
   // const [remoteHandDirection, setRemoteHandDirection] = useState<number>(0);
   const [isRemoteColliding, setIsRemoteColliding] = useState<boolean>(false);
+	const remotePreviousHandPositionRef = useRef<TimestampedPosition | null>(
+		null
+	);
 
   // -------------- Hooks: Socket + WebRTC --------------
   const { socketRef } = useSocketIO(roomId);
@@ -59,6 +64,8 @@ export default function CallPage() {
     setIsRemoteColliding,
     setHandSpeed,
     setRemoteHandSpeed,
+    localPreviousHandPositionRef,
+    remotePreviousHandPositionRef,
   });
 
   return (
@@ -89,7 +96,8 @@ export default function CallPage() {
           isColliding={isColliding}
           remoteHandSpeed={remoteHandSpeed}
           isRemoteColliding={isRemoteColliding}
-          
+          localPreviousHandPositionRef={localPreviousHandPositionRef}
+          remotePreviousHandPositionRef={remotePreviousHandPositionRef}
         />
       </div>
     </div>

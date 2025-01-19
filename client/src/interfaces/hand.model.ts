@@ -43,3 +43,10 @@ export interface MovementData {
   velocity: number;
   direction: number;
 }
+
+/** Used to track the bounding box + timestamp for velocity calculations. */
+export interface TimestampedPosition {
+	box: BoundingBox;
+	timestamp: number;
+}
+
