@@ -19,7 +19,7 @@ export default function useSocketIO(roomId: string): UseSocketIOResult {
 
     // Connect to your socket server:
     // Adjust the URL to your server endpoint.
-    socketRef.current = io('https://nwhacks25-nametba.onrender.com', {
+    socketRef.current = io('http://localhost:5001', {
       transports: ['websocket'],
     });
 
