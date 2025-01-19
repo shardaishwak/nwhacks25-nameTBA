@@ -1,6 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-"use client"; // Ensure this file is treated as a Client Component
+"use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
@@ -9,7 +7,7 @@ import {
 	HandLandmarker,
 	FaceLandmarker,
 	FilesetResolver,
-} from '@mediapipe/tasks-vision';
+} from "@mediapipe/tasks-vision";
 
 interface FaceLandmark {
 	x: number;
@@ -31,70 +29,108 @@ interface HandDetectionResults {
 }
 
 export default function RoomPage() {
-	// `useParams` is provided by Next.js 13+ for reading dynamic route segments
 	const { roomId } = useParams() as { roomId: string };
 
 	const socketRef = useRef<any>(null);
 	const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
 
-	// Hidden local & remote <video> elements
+	// Video refs
 	const localVideoRef = useRef<HTMLVideoElement>(null);
 	const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
-	// New refs for landmark detection
-	const localCanvasRef = useRef<HTMLCanvasElement>(null);
-	const remoteCanvasRef = useRef<HTMLCanvasElement>(null);
+	// Canvas refs for local face & hand
+	const localFaceCanvasRef = useRef<HTMLCanvasElement>(null);
+	const localHandCanvasRef = useRef<HTMLCanvasElement>(null);
 
-	// State for landmark detection
-	const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(null);
-	const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(null);
-	const [localCtx, setLocalCtx] = useState<CanvasRenderingContext2D | null>(null);
-	const [remoteCtx, setRemoteCtx] = useState<CanvasRenderingContext2D | null>(null);
+	// Canvas refs for remote face & hand
+	const remoteFaceCanvasRef = useRef<HTMLCanvasElement>(null);
+	const remoteHandCanvasRef = useRef<HTMLCanvasElement>(null);
+
+	// State for the Mediapipe landmarker instances
+	const [faceLandmarker, setFaceLandmarker] = useState<FaceLandmarker | null>(
+		null
+	);
+	const [handLandmarker, setHandLandmarker] = useState<HandLandmarker | null>(
+		null
+	);
+
+	// Canvas contexts for local face & hand
+	const [localFaceCtx, setLocalFaceCtx] =
+		useState<CanvasRenderingContext2D | null>(null);
+	const [localHandCtx, setLocalHandCtx] =
+		useState<CanvasRenderingContext2D | null>(null);
+
+	// Canvas contexts for remote face & hand
+	const [remoteFaceCtx, setRemoteFaceCtx] =
+		useState<CanvasRenderingContext2D | null>(null);
+	const [remoteHandCtx, setRemoteHandCtx] =
+		useState<CanvasRenderingContext2D | null>(null);
 
 	// Track if we have a remote stream
 	const [remoteStreamExists, setRemoteStreamExists] = useState(false);
 
-	// Initialize landmarkers
+	// 1) Initialize Mediapipe tasks & canvas contexts
 	useEffect(() => {
 		const initializeLandmarkers = async () => {
-			const filesetResolver = await FilesetResolver.forVisionTasks('/models/wasm');
-			
-			const faceLandmarkerInstance = await FaceLandmarker.createFromOptions(filesetResolver, {
-				baseOptions: {
-					modelAssetPath: '/models/face_landmarker.task',
-					delegate: 'GPU',
-				},
-				outputFaceBlendshapes: true,
-				runningMode: 'VIDEO',
-				numFaces: 5,
-			});
+			const filesetResolver = await FilesetResolver.forVisionTasks(
+				"/models/wasm"
+			);
 
-			const handLandmarkerInstance = await HandLandmarker.createFromOptions(filesetResolver, {
-				baseOptions: {
-					modelAssetPath: '/models/hand_landmarker.task',
-					delegate: 'GPU',
-				},
-				runningMode: 'VIDEO',
-				numHands: 4,
-			});
+			const faceLandmarkerInstance = await FaceLandmarker.createFromOptions(
+				filesetResolver,
+				{
+					baseOptions: {
+						modelAssetPath: "/models/face_landmarker.task",
+						delegate: "GPU",
+					},
+					outputFaceBlendshapes: true,
+					runningMode: "VIDEO",
+					numFaces: 5,
+				}
+			);
+
+			const handLandmarkerInstance = await HandLandmarker.createFromOptions(
+				filesetResolver,
+				{
+					baseOptions: {
+						modelAssetPath: "/models/hand_landmarker.task",
+						delegate: "GPU",
+					},
+					runningMode: "VIDEO",
+					numHands: 4,
+				}
+			);
 
 			setFaceLandmarker(faceLandmarkerInstance);
 			setHandLandmarker(handLandmarkerInstance);
 
-			// Initialize canvas contexts
-			if (localCanvasRef.current) {
-				const ctx = localCanvasRef.current.getContext('2d');
+			// Set canvas contexts
+			if (localFaceCanvasRef.current) {
+				const ctx = localFaceCanvasRef.current.getContext("2d");
 				if (ctx) {
-					ctx.globalAlpha = 0.8;
-					setLocalCtx(ctx);
+					ctx.globalAlpha = 0.9;
+					setLocalFaceCtx(ctx);
 				}
 			}
-
-			if (remoteCanvasRef.current) {
-				const ctx = remoteCanvasRef.current.getContext('2d');
+			if (localHandCanvasRef.current) {
+				const ctx = localHandCanvasRef.current.getContext("2d");
 				if (ctx) {
-					ctx.globalAlpha = 0.8;
-					setRemoteCtx(ctx);
+					ctx.globalAlpha = 0.9;
+					setLocalHandCtx(ctx);
+				}
+			}
+			if (remoteFaceCanvasRef.current) {
+				const ctx = remoteFaceCanvasRef.current.getContext("2d");
+				if (ctx) {
+					ctx.globalAlpha = 0.9;
+					setRemoteFaceCtx(ctx);
+				}
+			}
+			if (remoteHandCanvasRef.current) {
+				const ctx = remoteHandCanvasRef.current.getContext("2d");
+				if (ctx) {
+					ctx.globalAlpha = 0.9;
+					setRemoteHandCtx(ctx);
 				}
 			}
 		};
@@ -102,87 +138,145 @@ export default function RoomPage() {
 		initializeLandmarkers();
 	}, []);
 
-	// Detection function
-	const detectFeaturesInVideo = async (
-		video: HTMLVideoElement,
-		canvas: HTMLCanvasElement,
-		context: CanvasRenderingContext2D
-	) => {
-		if (!video || !canvas || !context || video.paused || video.ended || !faceLandmarker || !handLandmarker) return;
-
-		try {
-			const timestamp = performance.now();
-
-			// Detect faces
-			const faceResults = faceLandmarker.detectForVideo(video, timestamp) as DetectionResults;
-			
-			// Detect hands
-			const handResults = handLandmarker.detectForVideo(video, timestamp) as HandDetectionResults;
-
-			// Clear canvas
-			context.clearRect(0, 0, canvas.width, canvas.height);
-
-			// Draw face landmarks
-			if (faceResults?.faceLandmarks) {
-				faceResults.faceLandmarks.forEach((landmarks) => {
-					landmarks.forEach((landmark) => {
-						context.beginPath();
-						context.arc(
-							landmark.x * canvas.width,
-							landmark.y * canvas.height,
-							2,
-							0,
-							Math.PI * 2
-						);
-						context.fillStyle = '#FFFFFF';
-						context.fill();
-					});
-				});
-			}
-
-			// Draw hand landmarks
-			if (handResults?.landmarks) {
-				handResults.landmarks.forEach((landmarks) => {
-					landmarks.forEach((landmark) => {
-						context.beginPath();
-						context.arc(
-							landmark.x * canvas.width,
-							landmark.y * canvas.height,
-							3,
-							0,
-							Math.PI * 2
-						);
-						context.fillStyle = '#00FF00';
-						context.fill();
-					});
-				});
-			}
-		} catch (error) {
-			console.error('Error in detection:', error);
-		}
-	};
-
-	// Animation frame handler
+	// 2) Per-frame detection
 	useEffect(() => {
 		let animationFrameId: number;
 
 		const animate = async () => {
-			// Detect for local video
-			if (localVideoRef.current && localCanvasRef.current && localCtx) {
-				await detectFeaturesInVideo(
-					localVideoRef.current,
-					localCanvasRef.current,
-					localCtx
-				);
+			if (!faceLandmarker || !handLandmarker) {
+				animationFrameId = requestAnimationFrame(animate);
+				return;
 			}
 
-			// Detect for remote video
-			if (remoteVideoRef.current && remoteCanvasRef.current && remoteCtx && remoteStreamExists) {
-				await detectFeaturesInVideo(
-					remoteVideoRef.current,
-					remoteCanvasRef.current,
-					remoteCtx
-				);
+			// --- Detect and draw for LOCAL video ---
+			if (
+				localVideoRef.current &&
+				!localVideoRef.current.paused &&
+				!localVideoRef.current.ended
+			) {
+				const video = localVideoRef.current;
+				const timestamp = performance.now();
+
+				const faceResults = faceLandmarker.detectForVideo(
+					video,
+					timestamp
+				) as DetectionResults;
+				const handResults = handLandmarker.detectForVideo(
+					video,
+					timestamp
+				) as HandDetectionResults;
+
+				// Draw face landmarks on localFaceCanvas
+				if (localFaceCtx && localFaceCanvasRef.current) {
+					const faceCanvas = localFaceCanvasRef.current;
+					localFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+
+					if (faceResults?.faceLandmarks) {
+						faceResults.faceLandmarks.forEach((landmarks) => {
+							landmarks.forEach((lm) => {
+								localFaceCtx.beginPath();
+								localFaceCtx.arc(
+									lm.x * faceCanvas.width,
+									lm.y * faceCanvas.height,
+									2,
+									0,
+									Math.PI * 2
+								);
+								localFaceCtx.fillStyle = "#FFFFFF";
+								localFaceCtx.fill();
+							});
+						});
+					}
+				}
+
+				// Draw hand landmarks on localHandCanvas
+				if (localHandCtx && localHandCanvasRef.current) {
+					const handCanvas = localHandCanvasRef.current;
+					localHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+
+					if (handResults?.landmarks) {
+						handResults.landmarks.forEach((landmarks) => {
+							landmarks.forEach((lm) => {
+								localHandCtx.beginPath();
+								localHandCtx.arc(
+									lm.x * handCanvas.width,
+									lm.y * handCanvas.height,
+									3,
+									0,
+									Math.PI * 2
+								);
+								localHandCtx.fillStyle = "#00FF00";
+								localHandCtx.fill();
+							});
+						});
+					}
+				}
+			}
+
+			// --- Detect and draw for REMOTE video ---
+			if (
+				remoteStreamExists &&
+				remoteVideoRef.current &&
+				!remoteVideoRef.current.paused &&
+				!remoteVideoRef.current.ended
+			) {
+				const video = remoteVideoRef.current;
+				const timestamp = performance.now();
+
+				const faceResults = faceLandmarker.detectForVideo(
+					video,
+					timestamp
+				) as DetectionResults;
+				const handResults = handLandmarker.detectForVideo(
+					video,
+					timestamp
+				) as HandDetectionResults;
+
+				// Draw face on remoteFaceCanvas
+				if (remoteFaceCtx && remoteFaceCanvasRef.current) {
+					const faceCanvas = remoteFaceCanvasRef.current;
+					remoteFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+
+					if (faceResults?.faceLandmarks) {
+						faceResults.faceLandmarks.forEach((landmarks) => {
+							landmarks.forEach((lm) => {
+								remoteFaceCtx.beginPath();
+								remoteFaceCtx.arc(
+									lm.x * faceCanvas.width,
+									lm.y * faceCanvas.height,
+									2,
+									0,
+									Math.PI * 2
+								);
+								remoteFaceCtx.fillStyle = "#FFFFFF";
+								remoteFaceCtx.fill();
+							});
+						});
+					}
+				}
+
+				// Draw hand on remoteHandCanvas
+				if (remoteHandCtx && remoteHandCanvasRef.current) {
+					const handCanvas = remoteHandCanvasRef.current;
+					remoteHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+
+					if (handResults?.landmarks) {
+						handResults.landmarks.forEach((landmarks) => {
+							landmarks.forEach((lm) => {
+								remoteHandCtx.beginPath();
+								remoteHandCtx.arc(
+									lm.x * handCanvas.width,
+									lm.y * handCanvas.height,
+									3,
+									0,
+									Math.PI * 2
+								);
+								remoteHandCtx.fillStyle = "#00FF00";
+								remoteHandCtx.fill();
+							});
+						});
+					}
+				}
 			}
 
 			animationFrameId = requestAnimationFrame(animate);
@@ -191,21 +285,20 @@ export default function RoomPage() {
 		animate();
 
 		return () => {
-			if (animationFrameId) {
-				cancelAnimationFrame(animationFrameId);
-			}
+			if (animationFrameId) cancelAnimationFrame(animationFrameId);
 		};
-	}, [faceLandmarker, handLandmarker, localCtx, remoteCtx, remoteStreamExists]);
+	}, [faceLandmarker, handLandmarker, remoteStreamExists]);
 
+	// 3) WebRTC + Socket.IO logic
 	useEffect(() => {
 		if (!roomId) return;
 
-		// 1) Connect to Socket.IO signaling server
+		// 1) Connect to Socket.IO
 		socketRef.current = io("https://nwhacks25-nametba.onrender.com", {
 			transports: ["websocket"],
 		});
 
-		// 2) Create RTCPeerConnection first
+		// 2) Create RTCPeerConnection
 		const configuration: RTCConfiguration = {
 			iceServers: [
 				{ urls: "stun:stun.l.google.com:19302" },
@@ -215,13 +308,13 @@ export default function RoomPage() {
 		const pc = new RTCPeerConnection(configuration);
 		peerConnectionRef.current = pc;
 
-		// 3) Set up connection handlers
+		// 3) Socket events
 		socketRef.current.on("connect", () => {
 			console.log("Connected to signaling server:", socketRef.current.id);
 			socketRef.current.emit("join-room", roomId);
 		});
 
-		// 4) Handle remote tracks
+		// 4) Handle remote track
 		pc.ontrack = (event) => {
 			console.log("Got remote track:", event.streams[0]);
 			if (remoteVideoRef.current && event.streams[0]) {
@@ -230,7 +323,7 @@ export default function RoomPage() {
 			}
 		};
 
-		// 5) Handle ICE candidates
+		// 5) ICE candidates
 		pc.onicecandidate = (event) => {
 			if (event.candidate) {
 				socketRef.current.emit("signal", {
@@ -240,38 +333,35 @@ export default function RoomPage() {
 			}
 		};
 
-		// 6) Handle peer connection state changes
 		pc.onconnectionstatechange = () => {
 			console.log("Connection state:", pc.connectionState);
 		};
 
-		// 7) Handle ICE connection state changes
 		pc.oniceconnectionstatechange = () => {
 			console.log("ICE connection state:", pc.iceConnectionState);
 		};
 
-		// 8) Set up local stream first
+		// 6) Get local stream
 		navigator.mediaDevices
-			.getUserMedia({ 
-				video: { 
+			.getUserMedia({
+				video: {
 					width: { ideal: 640 },
 					height: { ideal: 480 },
-					frameRate: { ideal: 30 }
-				}, 
-				audio: true 
+					frameRate: { ideal: 30 },
+				},
+				audio: true,
 			})
 			.then((stream) => {
 				if (localVideoRef.current) {
 					localVideoRef.current.srcObject = stream;
 				}
-				// Add all tracks to the peer connection
 				stream.getTracks().forEach((track) => {
 					pc.addTrack(track, stream);
 				});
 			})
 			.catch((err) => console.error("getUserMedia error:", err));
 
-		// 9) Handle peer joining
+		// 7) Peer joined
 		socketRef.current.on("peer-joined", async (newPeerId: string) => {
 			console.log("Peer joined:", newPeerId);
 			if (socketRef.current.id < newPeerId) {
@@ -283,7 +373,7 @@ export default function RoomPage() {
 			}
 		});
 
-		// 10) Handle signaling
+		// 8) Signaling
 		socketRef.current.on("signal", async ({ from, data }: any) => {
 			try {
 				if (data.type === "offer") {
@@ -304,7 +394,6 @@ export default function RoomPage() {
 			}
 		});
 
-		// Cleanup
 		return () => {
 			if (socketRef.current) {
 				socketRef.current.disconnect();
@@ -315,7 +404,6 @@ export default function RoomPage() {
 		};
 	}, [roomId]);
 
-	// Function to create an offer
 	async function createOffer() {
 		try {
 			const pc = peerConnectionRef.current;
@@ -335,9 +423,10 @@ export default function RoomPage() {
 		}
 	}
 
+	// 4) JSX layout with separate canvas elements
 	return (
 		<div className="grid grid-cols-2 gap-4 p-4 h-screen bg-gray-800">
-			{/* Local Video Container */}
+			{/* -------- LOCAL VIDEO + Face & Hand Canvas -------- */}
 			<div className="relative w-[640px] h-[480px] mx-auto">
 				<video
 					ref={localVideoRef}
@@ -346,15 +435,25 @@ export default function RoomPage() {
 					playsInline
 					className="w-full h-full object-cover bg-gray-900 rounded-lg"
 				/>
+
+				{/* Local Face Canvas */}
 				<canvas
-					ref={localCanvasRef}
+					ref={localFaceCanvasRef}
 					width={640}
 					height={480}
-					className="absolute top-0 left-0 w-full h-full rounded-lg"
+					className="absolute top-0 left-0 w-full h-full rounded-lg pointer-events-none"
+				/>
+
+				{/* Local Hand Canvas */}
+				<canvas
+					ref={remoteHandCanvasRef}
+					width={640}
+					height={480}
+					className="absolute top-0 left-0 w-full h-full rounded-lg pointer-events-none"
 				/>
 			</div>
 
-			{/* Remote Video Container */}
+			{/* -------- REMOTE VIDEO + Face & Hand Canvas -------- */}
 			<div className="relative w-[640px] h-[480px] mx-auto">
 				<video
 					ref={remoteVideoRef}
@@ -362,11 +461,21 @@ export default function RoomPage() {
 					playsInline
 					className="w-full h-full object-cover bg-gray-900 rounded-lg"
 				/>
+
+				{/* Remote Face Canvas */}
 				<canvas
-					ref={remoteCanvasRef}
+					ref={remoteFaceCanvasRef}
 					width={640}
 					height={480}
-					className="absolute top-0 left-0 w-full h-full rounded-lg"
+					className="absolute top-0 left-0 w-full h-full rounded-lg pointer-events-none"
+				/>
+
+				{/* Remote Hand Canvas */}
+				<canvas
+					ref={localHandCanvasRef}
+					width={640}
+					height={480}
+					className="absolute top-0 left-0 w-full h-full rounded-lg pointer-events-none"
 				/>
 			</div>
 		</div>
