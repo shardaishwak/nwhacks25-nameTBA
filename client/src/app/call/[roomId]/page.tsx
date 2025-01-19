@@ -28,6 +28,7 @@ import {
 	HandDetectionResults,
 	BoundingBox,
 } from "@/interfaces/hand.model";
+import { playSound } from "@/lib/utilts";
 
 // Add this interface near the top with other imports
 interface TimestampedPosition {
@@ -107,9 +108,8 @@ export default function RoomPage() {
 				"/models/wasm"
 			);
 
-			const localFaceLandmarkerInstance = await FaceLandmarker.createFromOptions(
-				filesetResolver,
-				{
+			const localFaceLandmarkerInstance =
+				await FaceLandmarker.createFromOptions(filesetResolver, {
 					baseOptions: {
 						modelAssetPath: "/models/face_landmarker.task",
 						delegate: "GPU",
@@ -117,24 +117,20 @@ export default function RoomPage() {
 					outputFaceBlendshapes: false,
 					runningMode: "VIDEO",
 					numFaces: 1,
-				}
-			);
+				});
 
-			const localHandLandmarkerInstance = await HandLandmarker.createFromOptions(
-				filesetResolver,
-				{
+			const localHandLandmarkerInstance =
+				await HandLandmarker.createFromOptions(filesetResolver, {
 					baseOptions: {
 						modelAssetPath: "/models/hand_landmarker.task",
 						delegate: "GPU",
 					},
 					runningMode: "VIDEO",
 					numHands: 1,
-				}
-			);
+				});
 
-			const remoteFaceLandmarkerInstance = await FaceLandmarker.createFromOptions(
-				filesetResolver,
-				{
+			const remoteFaceLandmarkerInstance =
+				await FaceLandmarker.createFromOptions(filesetResolver, {
 					baseOptions: {
 						modelAssetPath: "/models/face_landmarker.task",
 						delegate: "GPU",
@@ -142,22 +138,17 @@ export default function RoomPage() {
 					outputFaceBlendshapes: false,
 					runningMode: "VIDEO",
 					numFaces: 1,
-				}
-			);
+				});
 
-			const remoteHandLandmarkerInstance = await HandLandmarker.createFromOptions(
-				filesetResolver,
-				{
+			const remoteHandLandmarkerInstance =
+				await HandLandmarker.createFromOptions(filesetResolver, {
 					baseOptions: {
 						modelAssetPath: "/models/hand_landmarker.task",
 						delegate: "GPU",
 					},
 					runningMode: "VIDEO",
 					numHands: 1,
-				}
-			);
-
-
+				});
 
 			setLocalFaceLandmarker(localFaceLandmarkerInstance);
 			setLocalHandLandmarker(localHandLandmarkerInstance);
@@ -275,7 +266,11 @@ export default function RoomPage() {
 
 							// Check collision with remote face instead
 							if (remoteFaceBoundingBox) {
-								const collision = checkCollision(currentPosition.box, remoteFaceBoundingBox, true);
+								const collision = checkCollision(
+									currentPosition.box,
+									remoteFaceBoundingBox,
+									true
+								);
 								setIsColliding(collision);
 
 								if (collision) {
@@ -345,7 +340,7 @@ export default function RoomPage() {
 					remoteVideoRef.current &&
 					!remoteVideoRef.current.paused &&
 					!remoteVideoRef.current.ended &&
-					remoteFaceLandmarker && 
+					remoteFaceLandmarker &&
 					remoteHandLandmarker // Add checks for remote landmarkers
 				) {
 					const video = remoteVideoRef.current;
@@ -425,7 +420,11 @@ export default function RoomPage() {
 
 							// Check collision with local face instead
 							if (localFaceBoundingBox) {
-								const collision = checkCollision(currentPosition.box, localFaceBoundingBox, true);
+								const collision = checkCollision(
+									currentPosition.box,
+									localFaceBoundingBox,
+									true
+								);
 								setIsRemoteColliding(collision);
 							}
 						}
@@ -762,6 +761,12 @@ export default function RoomPage() {
 			ctx.fill();
 		});
 	};
+
+	useEffect(() => {
+		if (isRemoteColliding || isColliding) {
+			playSound("punch");
+		}
+	}, [isRemoteColliding, isColliding]);
 
 	// 4) JSX layout with separate canvas elements
 	return (
