@@ -115,6 +115,51 @@ export function checkCollision(box1: BoundingBox, box2: BoundingBox, shouldMirro
     );
 }
 
+// Helper function to check if a point is inside a polygon formed by landmarks
+function isPointInPolygon(point: Point, landmarks: (HandLandmark | FaceLandmark)[]): boolean {
+    let inside = false;
+    for (let i = 0, j = landmarks.length - 1; i < landmarks.length; j = i++) {
+        const xi = landmarks[i].x, yi = landmarks[i].y;
+        const xj = landmarks[j].x, yj = landmarks[j].y;
+        
+        const intersect = ((yi > point.y) !== (yj > point.y))
+            && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+// Function to check collision between hand and face using landmarks
+export function checkLandmarkCollision(
+    handLandmarks: HandLandmark[],
+    faceLandmarks: FaceLandmark[],
+    shouldMirror: boolean = false
+): boolean {
+    // Check if any hand landmark is inside the face polygon
+    for (const handLandmark of handLandmarks) {
+        const point = {
+            x: shouldMirror ? 1 - handLandmark.x : handLandmark.x,
+            y: handLandmark.y
+        };
+        if (isPointInPolygon(point, faceLandmarks)) {
+            return true;
+        }
+    }
+
+    // Check if any face landmark is inside the hand polygon
+    for (const faceLandmark of faceLandmarks) {
+        const point = {
+            x: shouldMirror ? 1 - faceLandmark.x : faceLandmark.x,
+            y: faceLandmark.y
+        };
+        if (isPointInPolygon(point, handLandmarks)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 export function calculateDamage(velocity: number, powerups: Powerup[] = []): DamageData {
 
     const velocityScaler = 10; // Arbitrary scaling factor

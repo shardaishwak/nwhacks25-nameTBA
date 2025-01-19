@@ -58,9 +58,7 @@ export default function CallPage() {
     isRemoteColliding,
     setIsRemoteColliding,
     setHandSpeed,
-//     setHandDirection,
     setRemoteHandSpeed,
-//     setRemoteHandDirection,
   });
 
   return (

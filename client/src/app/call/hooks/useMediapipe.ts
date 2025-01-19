@@ -19,7 +19,6 @@ import {
   convertFaceLandmarksToBoundingBox,
   convertHandLandmarksToBoundingBox,
   calculateVelocity,
-  // calculateDirection,
   checkCollision,
 } from '@/lib/logic';
 import { drawHandEdges } from '@/utils/draw';
@@ -273,11 +272,9 @@ export default function useMediapipe({
             const prev = localPreviousHandPositionRef.current;
             if (prev && timestamp - prev.timestamp > 0) {
               const velocity = calculateVelocity(currentHandBox, prev.box, timestamp - prev.timestamp);
-              // const direction = calculateDirection(currentHandBox, prev.box);
 
-              // Speed & direction
+              // Speed
               setHandSpeed(velocity * 1000);
-              // setHandDirection(direction);
 
               // Check collision with remote face
               if (remoteFaceBoundingBox) {
@@ -290,7 +287,6 @@ export default function useMediapipe({
                     roomId,
                     data: {
                       speed: velocity,
-                      // direction,
                       timestamp,
                     },
                   });
@@ -367,12 +363,10 @@ export default function useMediapipe({
             const prev = remotePreviousHandPositionRef.current;
             if (prev && timestamp - prev.timestamp > 0) {
               const velocity = calculateVelocity(currentHandBox, prev.box, timestamp - prev.timestamp);
-              // const direction = calculateDirection(currentHandBox, prev.box);
 
               setRemoteHandSpeed(velocity * 1000);
-              // setRemoteHandDirection(direction);
 
-              // Check collision with local face bounding box
+              // Check collision with local face using bounding box
               if (localFaceBoundingBox) {
                 const collision = checkCollision(currentHandBox, localFaceBoundingBox, true);
                 setIsRemoteColliding(collision);
