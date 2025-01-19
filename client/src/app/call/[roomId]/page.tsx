@@ -107,7 +107,7 @@ export default function RoomPage() {
 				"/models/wasm"
 			);
 
-			const faceLandmarkerInstance = await FaceLandmarker.createFromOptions(
+			const localFaceLandmarkerInstance = await FaceLandmarker.createFromOptions(
 				filesetResolver,
 				{
 					baseOptions: {
@@ -120,7 +120,7 @@ export default function RoomPage() {
 				}
 			);
 
-			const handLandmarkerInstance = await HandLandmarker.createFromOptions(
+			const localHandLandmarkerInstance = await HandLandmarker.createFromOptions(
 				filesetResolver,
 				{
 					baseOptions: {
@@ -132,11 +132,38 @@ export default function RoomPage() {
 				}
 			);
 
-			setLocalFaceLandmarker(faceLandmarkerInstance);
-			setLocalHandLandmarker(handLandmarkerInstance);
+			const remoteFaceLandmarkerInstance = await FaceLandmarker.createFromOptions(
+				filesetResolver,
+				{
+					baseOptions: {
+						modelAssetPath: "/models/face_landmarker.task",
+						delegate: "GPU",
+					},
+					outputFaceBlendshapes: false,
+					runningMode: "VIDEO",
+					numFaces: 1,
+				}
+			);
 
-			setRemoteFaceLandmarker(faceLandmarkerInstance);
-			setRemoteHandLandmarker(handLandmarkerInstance);
+			const remoteHandLandmarkerInstance = await HandLandmarker.createFromOptions(
+				filesetResolver,
+				{
+					baseOptions: {
+						modelAssetPath: "/models/hand_landmarker.task",
+						delegate: "GPU",
+					},
+					runningMode: "VIDEO",
+					numHands: 1,
+				}
+			);
+
+
+
+			setLocalFaceLandmarker(localFaceLandmarkerInstance);
+			setLocalHandLandmarker(localHandLandmarkerInstance);
+
+			setRemoteFaceLandmarker(remoteFaceLandmarkerInstance);
+			setRemoteHandLandmarker(remoteHandLandmarkerInstance);
 
 			// Set canvas contexts
 			if (localFaceCanvasRef.current) {
@@ -248,11 +275,7 @@ export default function RoomPage() {
 
 							// Check collision with remote face instead
 							if (remoteFaceBoundingBox) {
-								console.log("fdssdfdsf");
-								const collision = checkCollision(
-									currentPosition.box,
-									remoteFaceBoundingBox
-								);
+								const collision = checkCollision(currentPosition.box, remoteFaceBoundingBox, true);
 								setIsColliding(collision);
 
 								if (collision) {
@@ -321,7 +344,9 @@ export default function RoomPage() {
 					remoteStreamExists &&
 					remoteVideoRef.current &&
 					!remoteVideoRef.current.paused &&
-					!remoteVideoRef.current.ended
+					!remoteVideoRef.current.ended &&
+					remoteFaceLandmarker && 
+					remoteHandLandmarker // Add checks for remote landmarkers
 				) {
 					const video = remoteVideoRef.current;
 
@@ -400,10 +425,7 @@ export default function RoomPage() {
 
 							// Check collision with local face instead
 							if (localFaceBoundingBox) {
-								const collision = checkCollision(
-									currentPosition.box,
-									localFaceBoundingBox
-								);
+								const collision = checkCollision(currentPosition.box, localFaceBoundingBox, true);
 								setIsRemoteColliding(collision);
 							}
 						}
