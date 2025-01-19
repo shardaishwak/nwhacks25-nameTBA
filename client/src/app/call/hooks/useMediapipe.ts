@@ -116,8 +116,8 @@ export default function useMediapipe({
   const [remoteFaceBoundingBox, setRemoteFaceBoundingBox] =
     useState<BoundingBox | null>(null);
 
-  // Add a ref for localFaceBoundingBox
-  const localFaceBoundingBoxRef = useRef<BoundingBox | null>(null);
+	// Add a ref for localFaceBoundingBox
+	// const localFaceBoundingBoxRef = useRef<BoundingBox | null>(null);
 
   // -----------------------------------------
   // 1) Initialize Mediapipe Face & Hand
@@ -262,83 +262,85 @@ export default function useMediapipe({
   // 	});
   // }, [socketRef, cachedRemote]);
 
-  const runFaceRemote = async (data: DetectionResults) => {
-    const faceResults = data as DetectionResults;
-    if (faceResults?.faceLandmarks?.[0]) {
-      const faceLm = faceResults.faceLandmarks[0];
-      const faceBox = convertFaceLandmarksToBoundingBox(faceLm);
-      setRemoteFaceBoundingBox(faceBox);
-    }
-    if (remoteFaceCtx && remoteFaceCanvasRef.current) {
-      const faceCanvas = remoteFaceCanvasRef.current;
-      remoteFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+	// const runFaceRemote = async (data: DetectionResults) => {
+	// 	const faceResults = data as DetectionResults;
+	// 	if (faceResults?.faceLandmarks?.[0]) {
+	// 		const faceLm = faceResults.faceLandmarks[0];
+	// 		const faceBox = convertFaceLandmarksToBoundingBox(faceLm);
+	// 		setRemoteFaceBoundingBox(faceBox);
+	// 	}
+	// 	if (remoteFaceCtx && remoteFaceCanvasRef.current) {
+	// 		const faceCanvas = remoteFaceCanvasRef.current;
+	// 		remoteFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
 
-      if (faceResults?.faceLandmarks) {
-        faceResults.faceLandmarks.forEach((lm) => {
-          drawFaceBoundingBox(lm, remoteFaceCtx, faceCanvas, false);
-        });
-      }
-    }
-  };
+	// 		if (faceResults?.faceLandmarks) {
+	// 			faceResults.faceLandmarks.forEach((lm) => {
+	// 				drawFaceBoundingBox(lm, remoteFaceCtx, faceCanvas, false);
+	// 			});
+	// 		}
+	// 	}
+	// };
 
-  const runHandRemote = async (
-    handResults: HandDetectionResults,
-    timestamp: number
-  ) => {
-    if (handResults?.landmarks && handResults.landmarks[0]) {
-      const handLm = handResults.landmarks[0];
-      const currentHandBox = convertHandLandmarksToBoundingBox(handLm);
-      const currentPosition: TimestampedPosition = {
-        box: currentHandBox,
-        timestamp: timestamp,
-      };
+	// const runHandRemote = async (
+	// 	handResults: HandDetectionResults,
+	// 	timestamp: number
+	// ) => {
+	// 	if (handResults?.landmarks && handResults.landmarks[0]) {
+	// 		const handLm = handResults.landmarks[0];
+	// 		const currentHandBox = convertHandLandmarksToBoundingBox(handLm);
+	// 		const currentPosition: TimestampedPosition = {
+	// 			box: currentHandBox,
+	// 			timestamp: timestamp,
+	// 		};
 
-      const prev = remotePreviousHandPositionRef.current;
-      if (prev && timestamp - prev.timestamp > 0) {
-        const velocity = calculateVelocity(
-          currentHandBox,
-          prev.box,
-          timestamp - prev.timestamp
-        );
+	// 		const prev = remotePreviousHandPositionRef.current;
+	// 		if (prev && timestamp - prev.timestamp > 0) {
+	// 			const velocity = calculateVelocity(
+	// 				currentHandBox,
+	// 				prev.box,
+	// 				timestamp - prev.timestamp
+	// 			);
+	// 			const direction = calculateDirection(currentHandBox, prev.box);
 
-        setRemoteHandSpeed(velocity * 1000);
+	// 			setRemoteHandSpeed(velocity * 1000);
+	// 			setRemoteHandDirection(direction);
 
-        // Check collision with local face bounding box
-        if (localFaceBoundingBoxRef.current) {
-          const collision = checkCollision(
-            currentHandBox,
-            localFaceBoundingBoxRef.current,
-            true
-          );
-          setIsRemoteColliding(collision);
-        }
-      }
-      remotePreviousHandPositionRef.current = currentPosition;
-    }
-    if (remoteHandCtx && remoteHandCanvasRef.current) {
-      const handCanvas = remoteHandCanvasRef.current;
-      remoteHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+	// 			// Check collision with local face bounding box
+	// 			if (localFaceBoundingBoxRef.current) {
+	// 				const collision = checkCollision(
+	// 					currentHandBox,
+	// 					localFaceBoundingBoxRef.current,
+	// 					true
+	// 				);
+	// 				setIsRemoteColliding(collision);
+	// 			}
+	// 		}
+	// 		remotePreviousHandPositionRef.current = currentPosition;
+	// 	}
+	// 	if (remoteHandCtx && remoteHandCanvasRef.current) {
+	// 		const handCanvas = remoteHandCanvasRef.current;
+	// 		remoteHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
 
-      if (handResults?.landmarks) {
-        handResults.landmarks.forEach((lm) => {
-          drawHandEdges(lm, remoteHandCtx, handCanvas, false);
-        });
-      }
-    }
-  };
+	// 		if (handResults?.landmarks) {
+	// 			handResults.landmarks.forEach((lm) => {
+	// 				drawHandEdges(lm, remoteHandCtx, handCanvas, false);
+	// 			});
+	// 		}
+	// 	}
+	// };
 
-  useEffect(() => {
-    socketRef?.current?.on("update", ({ data }) => {
-      const handResults = data?.handResults as HandDetectionResults;
-      runFaceRemote(data?.faceResults as DetectionResults);
-      runHandRemote(handResults, data.timestamp);
-    });
-  }, [socketRef, runFaceRemote, runHandRemote, setLocalFaceBoundingBox]);
+	// useEffect(() => {
+	// 	socketRef?.current?.on("update", ({ data }) => {
+	// 		const handResults = data?.handResults as HandDetectionResults;
+	// 		runFaceRemote(data?.faceResults as DetectionResults);
+	// 		runHandRemote(handResults, data.timestamp);
+	// 	});
+	// }, [socketRef, runFaceRemote, runHandRemote, setLocalFaceBoundingBox]);
 
-  // Update the ref whenever localFaceBoundingBox changes
-  useEffect(() => {
-    localFaceBoundingBoxRef.current = localFaceBoundingBox;
-  }, [localFaceBoundingBox]);
+	// // Update the ref whenever localFaceBoundingBox changes
+	// useEffect(() => {
+	// 	localFaceBoundingBoxRef.current = localFaceBoundingBox;
+	// }, [localFaceBoundingBox]);
 
   // -----------------------------------------
   // 2) Per-frame detection + drawing
@@ -384,14 +386,14 @@ export default function useMediapipe({
             roundedTimestamp
           )) as HandDetectionResults;
 
-          socketRef.current?.emit("update", {
-            roomId,
-            data: {
-              faceResults,
-              handResults,
-              timestamp,
-            },
-          });
+					// socketRef.current?.emit("update", {
+					// 	roomId,
+					// 	data: {
+					// 		faceResults,
+					// 		handResults,
+					// 		timestamp,
+					// 	},
+					// });
 
           // 1) Track local face bounding box
           if (faceResults?.faceLandmarks?.[0]) {
@@ -463,94 +465,94 @@ export default function useMediapipe({
           }
         }
 
-        // -------------------------------------
-        // REMOTE VIDEO DETECTION & DRAW
-        // -------------------------------------
-        // if (
-        // 	remoteStreamExists &&
-        // 	remoteVideoRef.current &&
-        // 	!remoteVideoRef.current.paused &&
-        // 	!remoteVideoRef.current.ended &&
-        // 	remoteFaceLandmarker &&
-        // 	remoteHandLandmarker
-        // ) {
-        // 	const video = remoteVideoRef.current;
-        // 	const remoteTs = Math.round(timestamp) + 1;
+				// -------------------------------------
+				// REMOTE VIDEO DETECTION & DRAW
+				// -------------------------------------
+				if (
+					remoteStreamExists &&
+					remoteVideoRef.current &&
+					!remoteVideoRef.current.paused &&
+					!remoteVideoRef.current.ended &&
+					remoteFaceLandmarker &&
+					remoteHandLandmarker
+				) {
+					const video = remoteVideoRef.current;
+					const remoteTs = Math.round(timestamp) + 1;
 
-        // 	// Detect remote face & hand
-        // 	const faceResults = (await remoteFaceLandmarker.detectForVideo(
-        // 		video,
-        // 		remoteTs
-        // 	)) as DetectionResults;
+					// Detect remote face & hand
+					const faceResults = (await remoteFaceLandmarker.detectForVideo(
+						video,
+						remoteTs
+					)) as DetectionResults;
 
-        // 	const handResults = (await remoteHandLandmarker.detectForVideo(
-        // 		video,
-        // 		remoteTs
-        // 	)) as HandDetectionResults;
+					const handResults = (await remoteHandLandmarker.detectForVideo(
+						video,
+						remoteTs
+					)) as HandDetectionResults;
 
-        // 	// 1) Track remote face bounding box
-        // 	if (faceResults?.faceLandmarks?.[0]) {
-        // 		const faceLm = faceResults.faceLandmarks[0];
-        // 		const faceBox = convertFaceLandmarksToBoundingBox(faceLm);
-        // 		setRemoteFaceBoundingBox(faceBox);
-        // 	}
+					// 1) Track remote face bounding box
+					if (faceResults?.faceLandmarks?.[0]) {
+						const faceLm = faceResults.faceLandmarks[0];
+						const faceBox = convertFaceLandmarksToBoundingBox(faceLm);
+						setRemoteFaceBoundingBox(faceBox);
+					}
 
-        // 	// 2) Process remote hand bounding box
-        // 	if (handResults?.landmarks && handResults.landmarks[0]) {
-        // 		const handLm = handResults.landmarks[0];
-        // 		const currentHandBox = convertHandLandmarksToBoundingBox(handLm);
-        // 		const currentPosition: TimestampedPosition = {
-        // 			box: currentHandBox,
-        // 			timestamp,
-        // 		};
+					// 2) Process remote hand bounding box
+					if (handResults?.landmarks && handResults.landmarks[0]) {
+						const handLm = handResults.landmarks[0];
+						const currentHandBox = convertHandLandmarksToBoundingBox(handLm);
+						const currentPosition: TimestampedPosition = {
+							box: currentHandBox,
+							timestamp,
+						};
 
-        // 		const prev = remotePreviousHandPositionRef.current;
-        // 		if (prev && timestamp - prev.timestamp > 0) {
-        // 			const velocity = calculateVelocity(
-        // 				currentHandBox,
-        // 				prev.box,
-        // 				timestamp - prev.timestamp
-        // 			);
-        // 			const direction = calculateDirection(currentHandBox, prev.box);
+						const prev = remotePreviousHandPositionRef.current;
+						if (prev && timestamp - prev.timestamp > 0) {
+							const velocity = calculateVelocity(
+								currentHandBox,
+								prev.box,
+								timestamp - prev.timestamp
+							);
+							const direction = calculateDirection(currentHandBox, prev.box);
 
-        // 			setRemoteHandSpeed(velocity * 1000);
-        // 			setRemoteHandDirection(direction);
+							setRemoteHandSpeed(velocity * 1000);
+							setRemoteHandDirection(direction);
 
-        // 			// Check collision with local face using bounding box
-        // 			if (localFaceBoundingBox) {
-        // 				const collision = checkCollision(
-        // 					currentHandBox,
-        // 					localFaceBoundingBox,
-        // 					true
-        // 				);
-        // 				setIsRemoteColliding(collision);
-        // 			}
-        // 		}
-        // 		remotePreviousHandPositionRef.current = currentPosition;
-        // 	}
+							// Check collision with local face bounding box
+							if (localFaceBoundingBox) {
+								const collision = checkCollision(
+									currentHandBox,
+									localFaceBoundingBox,
+									true
+								);
+								setIsRemoteColliding(collision);
+							}
+						}
+						remotePreviousHandPositionRef.current = currentPosition;
+					}
 
-        // 3) Draw remote face & hand
-        // if (remoteFaceCtx && remoteFaceCanvasRef.current) {
-        // 	const faceCanvas = remoteFaceCanvasRef.current;
-        // 	remoteFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
+					// 3) Draw remote face & hand
+					if (remoteFaceCtx && remoteFaceCanvasRef.current) {
+						const faceCanvas = remoteFaceCanvasRef.current;
+						remoteFaceCtx.clearRect(0, 0, faceCanvas.width, faceCanvas.height);
 
-        // 	if (faceResults?.faceLandmarks) {
-        // 		faceResults.faceLandmarks.forEach((lm) => {
-        // 			drawFaceBoundingBox(lm, remoteFaceCtx, faceCanvas, false);
-        // 		});
-        // 	}
-        // }
-        // if (remoteHandCtx && remoteHandCanvasRef.current) {
-        // 	const handCanvas = remoteHandCanvasRef.current;
-        // 	remoteHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+						if (faceResults?.faceLandmarks) {
+							faceResults.faceLandmarks.forEach((lm) => {
+								drawFaceBoundingBox(lm, remoteFaceCtx, faceCanvas, false);
+							});
+						}
+					}
+					if (remoteHandCtx && remoteHandCanvasRef.current) {
+						const handCanvas = remoteHandCanvasRef.current;
+						remoteHandCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
 
-        // 	if (handResults?.landmarks) {
-        // 		handResults.landmarks.forEach((lm) => {
-        // 			drawHandEdges(lm, remoteHandCtx, handCanvas, false);
-        // 		});
-        // 	}
-        // }
-        // }
+						if (handResults?.landmarks) {
+							handResults.landmarks.forEach((lm) => {
+								drawHandEdges(lm, remoteHandCtx, handCanvas, false);
+							});
+						}
+					}
+				}
 
         lastProcessedTimestamp = timestamp;
       } catch (err) {
