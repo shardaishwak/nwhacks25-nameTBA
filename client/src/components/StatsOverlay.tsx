@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // components/StatsOverlay.tsx
 
-import React, { useState, useEffect, useRef } from 'react';
-import { calculateDamage } from '@/lib/logic';
-import { HealthScoreIcon } from './healthScore';
+import React, { useState, useEffect, useRef } from "react";
+import { calculateDamage } from "@/lib/logic";
+import { HealthScoreIcon } from "./healthScore";
+import { playSound } from "@/lib/utilts";
 import { TimestampedPosition } from '@/interfaces/hand.model';
 
 interface StatsOverlayProps {
@@ -22,52 +24,64 @@ export default function StatsOverlay({
   remotePreviousHandPositionRef,
   localPreviousHandPositionRef,
 }: StatsOverlayProps) {
+	const [localLastInflictedDamage, setLocalLastInflictedDamage] =
+		useState<number>(0);
+	const [remoteLastInflictedDamage, setRemoteLastInflictedDamage] =
+		useState<number>(0);
 
-  const [localLastInflictedDamage, setLocalLastInflictedDamage] = useState<number>(0);
-  const [remoteLastInflictedDamage, setRemoteLastInflictedDamage] = useState<number>(0);
+	// -------------- Health States --------------
+	const [localHealth, setLocalHealth] = useState<number>(100);
+	const [remoteHealth, setRemoteHealth] = useState<number>(100);
 
-  // -------------- Health States --------------
-  const [localHealth, setLocalHealth] = useState<number>(100);
-  const [remoteHealth, setRemoteHealth] = useState<number>(100);
+	const prevLocalCollision = useRef(false);
+	const prevRemoteCollision = useRef(false);
 
-  const prevLocalCollision = useRef(false);
-  const prevRemoteCollision = useRef(false);
-
-  useEffect(() => {
-    if (isColliding && !prevLocalCollision.current) {
+	useEffect(() => {
+		if (isColliding && !prevLocalCollision.current) {
       const currentTime = Date.now();
       const lastHitTime = localPreviousHandPositionRef.current?.timestamp ?? 0;
       
       // 500ms cooldown between hits
       if (currentTime - lastHitTime > 500) {
-        const damage = calculateDamage(handSpeed);
-        setRemoteLastInflictedDamage(damage.damage);
-        setRemoteHealth(prev => Math.max(0, prev - damage.damage));
+  			const damage = calculateDamage(handSpeed);
+  			setRemoteLastInflictedDamage(damage.damage);
+  			setRemoteHealth((prev) => Math.max(0, prev - damage.damage));
         if (localPreviousHandPositionRef.current) {
           localPreviousHandPositionRef.current.timestamp = currentTime;
         }
       }
-    }
-    prevLocalCollision.current = isColliding;
-  }, [isColliding, handSpeed, localPreviousHandPositionRef]);
+		}
+		prevLocalCollision.current = isColliding;
+	}, [isColliding, handSpeed, localPreviousHandPositionRef]);
 
-  useEffect(() => {
-    if (isRemoteColliding && !prevRemoteCollision.current) {
+	useEffect(() => {
+		if (remoteHealth > 0) {
+			const options = ["punch", "slap-2", "slap", "sowrds"];
+
+			// @ts-ignore
+			playSound(options[Math.floor(Math.random() * options.length)]);
+		} else {
+			playSound("knockout");
+		}
+	}, [remoteHealth]);
+
+	useEffect(() => {
+		if (isRemoteColliding && !prevRemoteCollision.current) {
       const currentTime = Date.now();
       const lastHitTime = remotePreviousHandPositionRef.current?.timestamp ?? 0;
 
       // 500ms cooldown between hits
       if (currentTime - lastHitTime > 500) {
-        const damage = calculateDamage(remoteHandSpeed);
-        setLocalLastInflictedDamage(damage.damage);
-        setLocalHealth(prev => Math.max(0, prev - damage.damage));
+  			const damage = calculateDamage(remoteHandSpeed);
+  			setLocalLastInflictedDamage(damage.damage);
+  			setLocalHealth((prev) => Math.max(0, prev - damage.damage));
         if (remotePreviousHandPositionRef.current) {
           remotePreviousHandPositionRef.current.timestamp = currentTime;
         }
       }
-    }
-    prevRemoteCollision.current = isRemoteColliding;
-  }, [isRemoteColliding, remoteHandSpeed, remotePreviousHandPositionRef]);
+		}
+		prevRemoteCollision.current = isRemoteColliding;
+	}, [isRemoteColliding, remoteHandSpeed, remotePreviousHandPositionRef]);
 
   return (
     <div className="bg-black/50 p-4 rounded-lg text-white font-mono">
