@@ -10,7 +10,7 @@ import StatsOverlay from '@/components/StatsOverlay';
 import LocalVideoSection from '@/components/LocalVideoSection';
 import useWebRTC from '../hooks/useWebRTC';
 import { TimestampedPosition } from '@/interfaces/hand.model';
-
+import RoomInfo from '@/components/RoomInfo';
 
 export default function CallPage() {
   const { roomId } = useParams() as { roomId: string };
@@ -70,8 +70,10 @@ export default function CallPage() {
 
   return (
     <div className="w-full h-screen bg-gray-800 relative">
+      <RoomInfo roomId={roomId} />
+      
       {/* Main remote video container */}
-      <div className="w-full h-full">
+      <div className="w-full h-full p-2">
         <RemoteVideoSection
           remoteVideoRef={remoteVideoRef}
           remoteStreamExists={remoteStreamExists}
@@ -90,7 +92,7 @@ export default function CallPage() {
       </div>
 
       {/* Bottom stats overlay */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full">
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full">
         <StatsOverlay
           handSpeed={handSpeed}
           isColliding={isColliding}

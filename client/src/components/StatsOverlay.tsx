@@ -81,15 +81,15 @@ export default function StatsOverlay({
           </div>
           <div>
             Speed: {handSpeed.toFixed(2)} units/ms
-            <div className="w-32 h-2 bg-gray-700 rounded">
+            <div hidden className="w-32 h-2 bg-gray-700 rounded">
               <div
                 className="h-full bg-green-500 rounded transition-all"
                 style={{ width: `${Math.min(handSpeed * 100, 100)}%` }}
               />
             </div>
           </div>
-          <div>Last Damage Taken: {localLastInflictedDamage.toFixed(1)}</div>
-          <div>
+          <div hidden>Last Damage Taken: {localLastInflictedDamage.toFixed(1)}</div>
+          <div hidden>
             Collision:{' '}
             <span className={isColliding ? 'text-red-500' : 'text-green-500'}>
               {isColliding ? 'YES' : 'NO'}
@@ -103,15 +103,15 @@ export default function StatsOverlay({
           <HealthScoreIcon score={Math.floor(remoteHealth / 10)} color="red" />
           <div>
             Speed: {remoteHandSpeed.toFixed(2)} units/ms
-            <div className="w-32 h-2 bg-gray-700 rounded">
+            <div hidden className="w-32 h-2 bg-gray-700 rounded">
               <div
                 className="h-full bg-green-500 rounded transition-all"
                 style={{ width: `${Math.min(remoteHandSpeed * 100, 100)}%` }}
               />
             </div>
           </div>
-          <div>Last Damage Taken: {remoteLastInflictedDamage.toFixed(1)}</div>
-          <div>
+          <div hidden>Last Damage Taken: {remoteLastInflictedDamage.toFixed(1)}</div>
+          <div hidden>
             Collision:{' '}
             <span
               className={isRemoteColliding ? 'text-red-500' : 'text-green-500'}

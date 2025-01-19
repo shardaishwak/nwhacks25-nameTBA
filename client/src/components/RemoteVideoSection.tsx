@@ -24,7 +24,7 @@ export default function RemoteVideoSection({
   };
 
   return (
-    <div className="relative mx-auto" style={containerStyle}>
+    <div className="relative mx-auto rounded-lg overflow-hidden shadow-lg" style={containerStyle}>
       {/* Remote video (mirrored) */}
       <video
         ref={remoteVideoRef}
