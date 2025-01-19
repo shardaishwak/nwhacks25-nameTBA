@@ -35,12 +35,12 @@ export default function LocalVideoSection({
 
   return (
     <div
-      className="relative rounded-lg overflow-hidden shadow-lg cursor-grab select-none aspect-video"
+      className="relative rounded-lg overflow-hidden shadow-lg cursor-grab select-none"
       style={{
         position: 'fixed',
         left: `${position.x}px`,
         top: `${position.y}px`,
-        width: '360px',
+        width: '300px',
         zIndex: 50,
       }}
       onMouseDown={handleMouseDown}
