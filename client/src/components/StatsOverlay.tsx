@@ -35,15 +35,17 @@ export default function StatsOverlay({
 			const damage = calculateDamage(handSpeed);
 			setRemoteLastInflictedDamage(damage.damage);
 			setRemoteHealth((prev) => Math.max(0, prev - damage.damage));
-
-			if (damage.damage > 0) {
-				playSound("punch");
-			} else {
-				playSound("knockout");
-			}
 		}
 		prevLocalCollision.current = isColliding;
 	}, [isColliding, handSpeed]);
+
+	useEffect(() => {
+		if (remoteHealth > 0) {
+			playSound("punch");
+		} else {
+			playSound("knockout");
+		}
+	}, [remoteHealth]);
 
 	useEffect(() => {
 		if (isRemoteColliding && !prevRemoteCollision.current) {
