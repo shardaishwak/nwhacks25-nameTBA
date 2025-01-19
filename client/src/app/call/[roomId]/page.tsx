@@ -110,6 +110,7 @@ export default function CallPage() {
           isRemoteColliding={isRemoteColliding}
           localPreviousHandPositionRef={localPreviousHandPositionRef}
           remotePreviousHandPositionRef={remotePreviousHandPositionRef}
+          socketRef={socketRef}
         />
       </div>
     </div>

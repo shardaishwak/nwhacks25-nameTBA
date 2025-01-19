@@ -1,4 +1,5 @@
 import { Socket } from "socket.io";
+import { calculateDamage } from './utils/damage';
 
 const express = require("express");
 const http = require("http");
@@ -40,10 +41,22 @@ io.on("connection", (socket: Socket) => {
 	// 	});
 	// });
 
-	socket.on("update", ({ roomId, data }) => {
+	socket.on("update", ({ roomId, data }: { roomId: string, data: any }) => {
 		socket.broadcast.to(roomId).emit("update", {
 			from: socket.id,
 			data,
+		});
+	});
+
+	socket.on("collision", ({ roomId, data }: { roomId: string, data: any }) => {
+		// Calculate damage on the server
+		const damageData = calculateDamage(data.speed);
+		
+		// Emit damage event to both players in the room
+		io.to(roomId).emit("damage", {
+			from: socket.id,
+			timestamp: data.timestamp,
+			damageData
 		});
 	});
 

@@ -6,6 +6,7 @@ import { calculateDamage } from "@/lib/logic";
 import { HealthScoreIcon } from "./healthScore";
 import { playSound } from "@/lib/utilts";
 import { TimestampedPosition } from '@/interfaces/hand.model';
+import { Socket } from "socket.io-client";
 
 interface StatsOverlayProps {
   handSpeed: number;
@@ -14,6 +15,7 @@ interface StatsOverlayProps {
   isRemoteColliding: boolean;
 	remotePreviousHandPositionRef: React.MutableRefObject<TimestampedPosition | null>;
 	localPreviousHandPositionRef: React.MutableRefObject<TimestampedPosition | null>;
+  socketRef: React.MutableRefObject<Socket | null>;
 }
 
 export default function StatsOverlay({
@@ -23,6 +25,7 @@ export default function StatsOverlay({
   isRemoteColliding,
   remotePreviousHandPositionRef,
   localPreviousHandPositionRef,
+  socketRef,
 }: StatsOverlayProps) {
 	const [localLastInflictedDamage, setLocalLastInflictedDamage] =
 		useState<number>(0);
@@ -36,6 +39,29 @@ export default function StatsOverlay({
 	const prevLocalCollision = useRef(false);
 	const prevRemoteCollision = useRef(false);
 
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    // Listen for damage events from server
+    socket.on("damage", ({ from, damageData }) => {
+        if (from === socket.id) {
+            // We dealt the damage
+            setRemoteLastInflictedDamage(damageData.damage);
+            setRemoteHealth(prev => Math.max(0, prev - damageData.damage));
+        } else {
+            // We received the damage
+            setLocalLastInflictedDamage(damageData.damage);
+            setLocalHealth(prev => Math.max(0, prev - damageData.damage));
+        }
+    });
+
+    return () => {
+        socket.off("damage");
+    };
+  }, [socketRef]);
+
+	// Remove the local damage calculations from collision effects
 	useEffect(() => {
 		if (isColliding && !prevLocalCollision.current) {
       const currentTime = Date.now();
@@ -43,16 +69,13 @@ export default function StatsOverlay({
       
       // 500ms cooldown between hits
       if (currentTime - lastHitTime > 500) {
-  			const damage = calculateDamage(handSpeed);
-  			setRemoteLastInflictedDamage(damage.damage);
-  			setRemoteHealth((prev) => Math.max(0, prev - damage.damage));
         if (localPreviousHandPositionRef.current) {
           localPreviousHandPositionRef.current.timestamp = currentTime;
         }
       }
 		}
 		prevLocalCollision.current = isColliding;
-	}, [isColliding, handSpeed, localPreviousHandPositionRef]);
+	}, [isColliding, localPreviousHandPositionRef]);
 
 	useEffect(() => {
 		if (remoteHealth > 0) {
@@ -117,7 +140,7 @@ export default function StatsOverlay({
           <HealthScoreIcon score={Math.floor(remoteHealth / 10)} color="red" />
           <div>
             Speed: {remoteHandSpeed.toFixed(2)} units/ms
-            <div hidden className="w-32 h-2 bg-gray-700 rounded">
+            <div hidden className="w-32 h-2 bg-gray-700 rounded"></div>
               <div
                 className="h-full bg-green-500 rounded transition-all"
                 style={{ width: `${Math.min(remoteHandSpeed * 100, 100)}%` }}
@@ -136,6 +159,6 @@ export default function StatsOverlay({
         </div>
 
       </div>
-    </div>
+    // </div>
   );
 }
