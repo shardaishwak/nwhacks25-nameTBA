@@ -159,6 +159,5 @@ export default function StatsOverlay({
         </div>
 
       </div>
-    // </div>
   );
 }
