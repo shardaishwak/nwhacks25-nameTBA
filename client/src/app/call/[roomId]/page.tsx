@@ -88,6 +88,10 @@ export default function RoomPage() {
 	const [remoteHandDirection, setRemoteHandDirection] = useState<number>(0);
 	const [isRemoteColliding, setIsRemoteColliding] = useState<boolean>(false);
 
+	// Add new state for storing remote face landmarks near other state declarations
+	const [remoteFaceBoundingBox, setRemoteFaceBoundingBox] = useState<BoundingBox | null>(null);
+	const [localFaceBoundingBox, setLocalFaceBoundingBox] = useState<BoundingBox | null>(null);
+
 	// 1) Initialize Mediapipe tasks & canvas contexts
 	useEffect(() => {
 		const initializeLandmarkers = async () => {
@@ -230,11 +234,9 @@ export default function RoomPage() {
 							setHandSpeed(velocity * 1000);
 							setHandDirection(direction);
 
-							// Process face collision
-							if (faceResults?.faceLandmarks?.[0]) {
-								const faceLandmarks = faceResults.faceLandmarks[0];
-								const faceBox = convertFaceLandmarksToBoundingBox(faceLandmarks);
-								const collision = checkCollision(currentPosition.box, faceBox);
+							 // Check collision with remote face instead
+							if (remoteFaceBoundingBox) {
+								const collision = checkCollision(currentPosition.box, remoteFaceBoundingBox);
 								setIsColliding(collision);
 
 								if (collision) {
@@ -276,6 +278,15 @@ export default function RoomPage() {
 								drawHandEdges(landmarks, localHandCtx, localHandCanvasRef.current as HTMLCanvasElement, true);
 							});
 						}
+					}
+
+					// Inside the animate function, update the LOCAL video section:
+					if (faceResults?.faceLandmarks?.[0]) {
+						const faceLandmarks = faceResults.faceLandmarks[0];
+						const faceBox = convertFaceLandmarksToBoundingBox(faceLandmarks);
+						setLocalFaceBoundingBox(faceBox); // Store local face box
+
+						// Remove local face collision check here
 					}
 				}
 
@@ -347,15 +358,21 @@ export default function RoomPage() {
 							setRemoteHandSpeed(velocity * 1000);
 							setRemoteHandDirection(direction);
 					
-							if (faceResults?.faceLandmarks?.[0]) {
-								const faceLandmarks = faceResults.faceLandmarks[0];
-								const faceBox = convertFaceLandmarksToBoundingBox(faceLandmarks);
-								const collision = checkCollision(currentPosition.box, faceBox);
+							// Check collision with local face instead
+							if (localFaceBoundingBox) {
+								const collision = checkCollision(currentPosition.box, localFaceBoundingBox);
 								setIsRemoteColliding(collision);
 							}
 						}
 					
 						remotePreviousHandPositionRef.current = currentPosition;
+					}
+
+					// Then in the REMOTE video section:
+					if (faceResults?.faceLandmarks?.[0]) {
+						const faceLandmarks = faceResults.faceLandmarks[0];
+						const faceBox = convertFaceLandmarksToBoundingBox(faceLandmarks);
+						setRemoteFaceBoundingBox(faceBox); // Store remote face box
 					}
 				}
 
