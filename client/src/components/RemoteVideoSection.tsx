@@ -16,15 +16,15 @@ export default function RemoteVideoSection({
   remoteFaceCanvasRef,
   localHandCanvasRef,
 }: RemoteVideoSectionProps) {
-  const scale = useHeightScaling();
+  // const scale = useHeightScaling();
   
-  const containerStyle = {
-    width: `${640 * scale}px`,
-    height: `${480 * scale}px`,
-  };
+  // const containerStyle = {
+  //   width: `${640 * scale}px`,
+  //   height: `${480 * scale}px`,
+  // };
 
   return (
-    <div className="relative mx-auto rounded-lg overflow-hidden shadow-lg" style={containerStyle}>
+    <div className="relative mx-auto rounded-lg overflow-hidden shadow-lg">
       {/* Remote video (mirrored) */}
       <video
         ref={remoteVideoRef}
