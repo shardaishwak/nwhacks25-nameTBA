@@ -263,7 +263,7 @@ export default function RoomPage() {
 
 							 // Check collision with remote face instead
 							if (remoteFaceBoundingBox) {
-								const collision = checkCollision(currentPosition.box, remoteFaceBoundingBox);
+								const collision = checkCollision(currentPosition.box, remoteFaceBoundingBox, true);
 								setIsColliding(collision);
 
 								if (collision) {
@@ -389,7 +389,7 @@ export default function RoomPage() {
 					
 							// Check collision with local face instead
 							if (localFaceBoundingBox) {
-								const collision = checkCollision(currentPosition.box, localFaceBoundingBox);
+								const collision = checkCollision(currentPosition.box, localFaceBoundingBox, true);
 								setIsRemoteColliding(collision);
 							}
 						}

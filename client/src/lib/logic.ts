@@ -108,10 +108,14 @@ export function calculateDirection(
 }
 
 // Function to check if two bounding boxes intersect
-export function checkCollision(box1: BoundingBox, box2: BoundingBox): boolean {
+export function checkCollision(box1: BoundingBox, box2: BoundingBox, shouldMirror: boolean = false): boolean {
+    // When checking collisions between local and remote elements, we need to mirror one of them
+    const x1 = shouldMirror ? 1 - box1.bottomRight.x : box1.topLeft.x;
+    const x2 = shouldMirror ? 1 - box1.topLeft.x : box1.bottomRight.x;
+    
     return (
-        box1.topLeft.x < box2.bottomRight.x &&
-        box1.bottomRight.x > box2.topLeft.x &&
+        x1 < box2.bottomRight.x &&
+        x2 > box2.topLeft.x &&
         box1.topLeft.y < box2.bottomRight.y &&
         box1.bottomRight.y > box2.topLeft.y
     );
