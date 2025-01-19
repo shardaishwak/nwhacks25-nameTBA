@@ -313,20 +313,20 @@ export default function useMediapipe({
 								setIsColliding(hasCollided);
 
 								// Emit collision event with interpolated velocity
-								if (hasCollided && socketRef.current) {
-									const velocity = calculateVelocity(
-										currentHandBox,
-										prev.box,
-										timeElapsed
-									);
-									socketRef.current.emit("collision", {
-										roomId,
-										data: {
-											speed: velocity,
-											timestamp,
-										},
-									});
-								}
+								// if (hasCollided && socketRef.current) {
+								// 	const velocity = calculateVelocity(
+								// 		currentHandBox,
+								// 		prev.box,
+								// 		timeElapsed
+								// 	);
+								// 	socketRef.current.emit("collision", {
+								// 		roomId,
+								// 		data: {
+								// 			speed: velocity,
+								// 			timestamp,
+								// 		},
+								// 	});
+								// }
 							}
 						}
 						localPreviousHandPositionRef.current = currentPosition;

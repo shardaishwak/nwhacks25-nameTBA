@@ -9,7 +9,8 @@ import RemoteVideoSection from "@/components/RemoteVideoSection";
 import StatsOverlay from "@/components/StatsOverlay";
 import LocalVideoSection from "@/components/LocalVideoSection";
 import useWebRTC from "../hooks/useWebRTC";
-import { playSound, renderVisual } from "@/lib/utilts";import { TimestampedPosition } from '@/interfaces/hand.model';
+import { playSound, renderVisual } from "@/lib/utilts";
+import { TimestampedPosition } from '@/interfaces/hand.model';
 import RoomInfo from '@/components/RoomInfo';
 
 export default function CallPage() {
@@ -110,7 +111,6 @@ export default function CallPage() {
           isRemoteColliding={isRemoteColliding}
           localPreviousHandPositionRef={localPreviousHandPositionRef}
           remotePreviousHandPositionRef={remotePreviousHandPositionRef}
-          socketRef={socketRef}
         />
       </div>
     </div>
