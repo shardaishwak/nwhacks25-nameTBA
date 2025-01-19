@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
 import React, { useRef, useState } from 'react';
@@ -45,34 +46,20 @@ export default function CallPage() {
   useMediapipe({
     roomId,
     socketRef,
-
-    // Videos
     localVideoRef,
     remoteVideoRef,
-
-    // Canvases
     localFaceCanvasRef,
     localHandCanvasRef,
     remoteFaceCanvasRef,
     remoteHandCanvasRef,
-
-    // Whether remote is streaming
     remoteStreamExists,
-
-    // Collisions & speeds
     isColliding,
     setIsColliding,
     isRemoteColliding,
     setIsRemoteColliding,
-
-    handSpeed,
     setHandSpeed,
-    handDirection,
     setHandDirection,
-
-    remoteHandSpeed,
     setRemoteHandSpeed,
-    remoteHandDirection,
     setRemoteHandDirection,
   });
 
